@@ -3821,7 +3821,7 @@ async function callCaddieStreaming(messages, outputEl) {
   const target = document.getElementById('aiStreamTarget');
 
   try {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+    const response = await fetch('/api/caddie', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -3973,7 +3973,7 @@ async function sendChatMessage() {
   history.scrollTop = history.scrollHeight;
 
   try {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+    const response = await fetch('/api/caddie', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
