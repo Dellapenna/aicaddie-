@@ -751,11 +751,11 @@ nav { padding: 0.8rem 1rem !important; }
     <button class="btab" id="btab-clubs" onclick="showPage('clubs',this)">
       <span class="btab-icon">🏌️</span><span class="btab-label">Clubs</span>
     </button>
-    <button class="btab" id="btab-leaderboard" onclick="showPage('leaderboard',this)">
-      <span class="btab-icon">🏆</span><span class="btab-label">Board</span>
-    </button>
     <button class="btab" id="btab-ai" onclick="showPage('ai',this)">
       <span class="btab-icon">🤖</span><span class="btab-label small">AI Caddie</span>
+    </button>
+    <button class="btab" id="btab-analytics" onclick="showPage('analytics',this)">
+      <span class="btab-icon">📈</span><span class="btab-label">Analytics</span>
     </button>
     <button class="btab" id="btab-more" onclick="toggleMoreMenu()">
       <span class="btab-icon">☰</span><span class="btab-label">More</span>
@@ -769,12 +769,11 @@ nav { padding: 0.8rem 1rem !important; }
     <div style="width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 1.25rem"></div>
     <div style="font-family:'Playfair Display',serif;font-size:1rem;color:var(--gold);margin-bottom:1rem;padding:0 0.5rem">More</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.6rem">
+      <button class="more-item" onclick="showPage('leaderboard',null);toggleMoreMenu()"><span>🏆</span> Board</button>
       <button class="more-item" onclick="showPage('history',null);toggleMoreMenu()"><span>📋</span> History</button>
       <button class="more-item" onclick="showPage('stats',null);toggleMoreMenu()"><span>📊</span> Stats</button>
       <button class="more-item" onclick="showPage('golfers',null);toggleMoreMenu()"><span>👤</span> Golfers</button>
       <button class="more-item" onclick="showPage('groups',null);toggleMoreMenu()"><span>👥</span> Groups</button>
-      <button class="more-item" onclick="showPage('analytics',null);toggleMoreMenu()"><span>📈</span> Analytics</button>
-      <button class="more-item" onclick="showPage('national',null);toggleMoreMenu()"><span>🌍</span> National</button>
       <button class="more-item" onclick="launchGame('https://wolfcaddie.netlify.app/');toggleMoreMenu()"><span>🎮</span> Games</button>
       <button class="more-item" id="moreAdminBtn" style="display:none" onclick="showPage('admin',null);toggleMoreMenu()"><span>🔑</span> Admin</button>
     </div>
@@ -1069,21 +1068,55 @@ nav { padding: 0.8rem 1rem !important; }
 
   <!-- LEADERBOARD -->
   <div id="page-leaderboard" class="page">
-    <div class="page-header">🏆 Group Leaderboard</div>
-    <div class="filter-bar">
-      <label>Sort by:</label>
-      <select id="lbSort" onchange="renderLeaderboard()">
-        <option value="avg">Avg Score</option>
-        <option value="hcp">WHS Handicap</option>
-        <option value="best">Best Round</option>
-        <option value="putts">Avg Putts</option>
-        <option value="rounds">Rounds Played</option>
-        <option value="beers">Total Beers 🍺</option>
-      </select>
+    <div class="page-header">🏆 Board</div>
+
+    <!-- Scope tabs -->
+    <div style="display:flex;gap:0.4rem;background:rgba(0,0,0,0.2);padding:0.35rem;border-radius:12px;margin-bottom:1.25rem">
+      <button class="ai-mode-btn active" id="lbScope-group" onclick="switchLbScope('group')">👥 My Group</button>
+      <button class="ai-mode-btn" id="lbScope-everyone" onclick="switchLbScope('everyone')">🌍 Everyone</button>
     </div>
+
+    <!-- Group scope controls -->
+    <div id="lbGroupControls" style="margin-bottom:1rem">
+      <div class="filter-bar" style="flex-wrap:wrap;gap:0.75rem">
+        <div class="form-group" style="margin:0;min-width:180px;flex:1">
+          <label>Group</label>
+          <select id="lbGroupPicker" onchange="renderLeaderboard()" style="font-size:0.85rem">
+            <option value="">— All my groups combined —</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin:0">
+          <label>Sort by</label>
+          <select id="lbSort" onchange="renderLeaderboard()" style="font-size:0.85rem">
+            <option value="avg">Avg Score</option>
+            <option value="hcp">WHS Handicap</option>
+            <option value="best">Best Round</option>
+            <option value="putts">Avg Putts</option>
+            <option value="rounds">Rounds Played</option>
+            <option value="beers">Total Beers 🍺</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- National / Everyone scope controls -->
+    <div id="lbNationalControls" style="display:none;margin-bottom:1rem">
+      <div class="filter-bar">
+        <label>Sort by:</label>
+        <select id="nationalSort" onchange="renderNational()" style="font-size:0.85rem">
+          <option value="avg">Avg Score</option>
+          <option value="best">Best Round</option>
+          <option value="rounds">Rounds Played</option>
+          <option value="putts">Avg Putts</option>
+          <option value="beers">Total Beers 🍺</option>
+        </select>
+      </div>
+      <p style="font-size:0.78rem;color:var(--cream-muted);margin-top:0.5rem">Names shown based on each golfer's privacy preference. <a onclick="showPage('profile',null)" style="color:var(--gold);cursor:pointer;text-decoration:underline">Manage yours in Profile</a>.</p>
+    </div>
+
     <div class="card"><div id="leaderboardBody"></div></div>
     <div class="card section-gap">
-      <div class="chart-title">Avg Score — All Golfers</div>
+      <div class="chart-title" id="lbChartTitle">Avg Score — All Golfers</div>
       <div id="lbChart"></div>
     </div>
   </div>
@@ -1289,31 +1322,64 @@ nav { padding: 0.8rem 1rem !important; }
 
   <!-- GROUPS PAGE -->
   <div id="page-groups" class="page">
-    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem">
-      <div class="page-header" style="margin:0">👥 My Groups</div>
-      <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
-        <button class="btn btn-outline btn-sm" onclick="openJoinGroup()">🔑 Join Group</button>
-        <button class="btn btn-gold btn-sm" onclick="openCreateGroup()">➕ Create Group</button>
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;margin-bottom:1.25rem">
+      <div class="page-header" style="margin:0">👥 Groups</div>
+      <div style="display:flex;gap:0.5rem">
+        <button class="btn btn-outline btn-sm" onclick="openJoinGroup()">🔑 Join by Code</button>
+        <button class="btn btn-gold btn-sm" onclick="openCreateGroup()">➕ Create</button>
       </div>
     </div>
-    <div id="groupsList"></div>
-  </div>
 
-  <!-- NATIONAL LEADERBOARD PAGE -->
-  <div id="page-national" class="page">
-    <div class="page-header">🌍 National Leaderboard</div>
-    <p style="font-size:0.82rem;color:var(--cream-muted);margin-bottom:1.5rem">All golfers ranked by average score. Real names are hidden — only anonymous tour handles shown.</p>
-    <div class="filter-bar" style="margin-bottom:1.5rem">
-      <label>Sort by:</label>
-      <select id="nationalSort" onchange="renderNational()">
-        <option value="avg">Avg Score</option>
-        <option value="best">Best Round</option>
-        <option value="rounds">Rounds Played</option>
-        <option value="putts">Avg Putts</option>
-        <option value="beers">Total Beers 🍺</option>
-      </select>
+    <!-- Tabs -->
+    <div style="display:flex;gap:0.4rem;background:rgba(0,0,0,0.2);padding:0.35rem;border-radius:12px;margin-bottom:1.25rem">
+      <button class="ai-mode-btn active" id="grpTab-mine" onclick="switchGroupTab('mine')">👥 My Groups</button>
+      <button class="ai-mode-btn" id="grpTab-discover" onclick="switchGroupTab('discover')">🔍 Discover</button>
+      <button class="ai-mode-btn" id="grpTab-players" onclick="switchGroupTab('players')">🏌️ Find Players</button>
     </div>
-    <div class="card"><div id="nationalBody"></div></div>
+
+    <!-- My Groups -->
+    <div id="grpPanel-mine">
+      <div id="groupsList"></div>
+    </div>
+
+    <!-- Discover public groups -->
+    <div id="grpPanel-discover" style="display:none">
+      <div style="display:flex;gap:0.5rem;margin-bottom:1rem">
+        <input type="text" id="groupSearchInput" placeholder="Search groups by name…" style="flex:1;font-size:0.88rem" oninput="searchPublicGroups()" />
+      </div>
+      <div id="groupSearchResults"></div>
+    </div>
+
+    <!-- Find players -->
+    <div id="grpPanel-players" style="display:none">
+      <div class="card" style="margin-bottom:1rem">
+        <div class="card-title" style="margin-bottom:1rem">Search by Stats</div>
+        <div class="form-row" style="margin-bottom:0.75rem">
+          <div class="form-group" style="margin:0">
+            <label>HCP Range</label>
+            <div style="display:flex;gap:0.5rem;align-items:center">
+              <input type="number" id="playerHcpMin" placeholder="Min" min="-10" max="54" style="width:70px" />
+              <span style="color:var(--cream-muted);font-size:0.85rem">to</span>
+              <input type="number" id="playerHcpMax" placeholder="Max" min="-10" max="54" style="width:70px" />
+            </div>
+          </div>
+          <div class="form-group" style="margin:0">
+            <label>Min Rounds</label>
+            <input type="number" id="playerMinRounds" placeholder="e.g. 5" min="1" style="max-width:100px" />
+          </div>
+          <div class="form-group" style="margin:0;align-self:flex-end">
+            <button class="btn btn-gold btn-sm" onclick="searchPlayers()">🔍 Search</button>
+          </div>
+        </div>
+        <div style="display:flex;gap:0.4rem;flex-wrap:wrap" id="playerSearchQuickFilters">
+          <div class="cond-pill" onclick="quickPlayerFilter('beginner')">🟢 Beginner (18+)</div>
+          <div class="cond-pill" onclick="quickPlayerFilter('mid')">🟡 Mid (10–18)</div>
+          <div class="cond-pill" onclick="quickPlayerFilter('low')">🔵 Low (0–10)</div>
+          <div class="cond-pill" onclick="quickPlayerFilter('scratch')">⭐ Scratch / Plus</div>
+        </div>
+      </div>
+      <div id="playerSearchResults"></div>
+    </div>
   </div>
 
   <!-- PROFILE PAGE -->
@@ -1339,9 +1405,13 @@ nav { padding: 0.8rem 1rem !important; }
         </div>
         <div style="margin-bottom:1rem">
           <label style="font-size:0.75rem;font-weight:600;color:var(--cream-muted);text-transform:uppercase;letter-spacing:0.06em;display:block;margin-bottom:0.5rem">National Leaderboard</label>
-          <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer">
+          <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;margin-bottom:0.4rem">
             <input type="checkbox" id="profileOptOut" style="width:auto;padding:0" />
             <span style="font-size:0.85rem;color:var(--cream-muted)">Opt out of national leaderboard</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer">
+            <input type="checkbox" id="profileShowRealName" style="width:auto;padding:0" />
+            <span style="font-size:0.85rem;color:var(--cream-muted)">Show my real name instead of tour handle</span>
           </label>
         </div>
         <button class="btn btn-gold" onclick="saveProfile()" style="width:100%;justify-content:center">Save Changes</button>
@@ -2189,6 +2259,7 @@ function renderProfilePage() {
   document.getElementById('profileNameInput').value = _currentProfile.display_name;
   document.getElementById('profileAnonId').textContent = _currentProfile.anonymous_id;
   document.getElementById('profileOptOut').checked = _currentProfile.national_lb_opt_out || false;
+  document.getElementById('profileShowRealName').checked = _currentProfile.show_real_name || false;
   const av = document.getElementById('profileAvatar');
   av.style.background = _currentProfile.avatar_color;
   av.textContent = _currentProfile.display_name.charAt(0).toUpperCase();
@@ -2202,14 +2273,16 @@ function renderProfilePage() {
 async function saveProfile() {
   const name   = document.getElementById('profileNameInput').value.trim();
   const optOut = document.getElementById('profileOptOut').checked;
+  const showRealName = document.getElementById('profileShowRealName').checked;
   if (!name) { showToast('Name cannot be empty'); return; }
   const { error } = await _supabase.from('golfer_profiles').update({
-    display_name: name, avatar_color: _onboardColor, national_lb_opt_out: optOut
+    display_name: name, avatar_color: _onboardColor, national_lb_opt_out: optOut, show_real_name: showRealName
   }).eq('id', _currentUser.id);
   if (error) { showToast('❌ ' + error.message); return; }
   _currentProfile.display_name  = name;
   _currentProfile.avatar_color  = _onboardColor;
   _currentProfile.national_lb_opt_out = optOut;
+  _currentProfile.show_real_name = showRealName;
   updateNavUser();
   // Show admin tab if admin
   const adminBtn = document.getElementById('adminNavBtn');
@@ -2288,22 +2361,34 @@ async function renderGroupsPage() {
 
 function openCreateGroup() {
   document.getElementById('groupModalTitle').textContent = '➕ Create Group';
+  const words = ['EAGLE','BIRDIE','FORE','ACE','PAR','CHIP','PUTT'];
+  const code  = words[Math.floor(Math.random()*words.length)] + Math.floor(10+Math.random()*90);
   document.getElementById('groupModalBody').innerHTML = `
     <div class="form-group" style="margin-bottom:0.75rem">
       <label>Group Name</label>
       <input class="auth-input" type="text" id="newGroupName" placeholder="e.g. Saturday Boys" maxlength="40" />
     </div>
+    <div class="form-group" style="margin-bottom:0.75rem">
+      <label>Privacy</label>
+      <div style="display:flex;gap:0.5rem;margin-top:0.25rem">
+        <div class="cond-pill selected" id="grpPrivPublic" onclick="setGrpPrivacy('public')" data-val="public">🌍 Public — discoverable by anyone</div>
+        <div class="cond-pill" id="grpPrivPrivate" onclick="setGrpPrivacy('private')" data-val="private">🔒 Private — invite code only</div>
+      </div>
+    </div>
     <div class="form-group" style="margin-bottom:1rem">
       <label>Invite Code <span style="font-weight:400;color:var(--cream-muted)">(auto-generated, you can change it)</span></label>
-      <input class="auth-input" type="text" id="newGroupCode" placeholder="e.g. EAGLE42" maxlength="10" style="text-transform:uppercase" />
-      <div style="font-size:0.75rem;color:var(--cream-muted);margin-top:0.3rem">Share this code with friends so they can join</div>
+      <input class="auth-input" type="text" id="newGroupCode" value="${code}" maxlength="10" style="text-transform:uppercase" />
+      <div style="font-size:0.75rem;color:var(--cream-muted);margin-top:0.3rem">Share this code so friends can join directly</div>
     </div>
     <button class="auth-btn auth-btn-gold" onclick="createGroup()">Create Group</button>`;
-  // Auto generate code
-  const words = ['EAGLE','BIRDIE','FORE','ACE','PAR','CHIP','PUTT'];
-  const code  = words[Math.floor(Math.random()*words.length)] + Math.floor(10+Math.random()*90);
-  document.getElementById('groupModalBody').querySelector('#newGroupCode').value = code;
   document.getElementById('groupModal').classList.add('open');
+}
+
+let _newGroupIsPublic = true;
+function setGrpPrivacy(val) {
+  _newGroupIsPublic = val === 'public';
+  document.getElementById('grpPrivPublic').classList.toggle('selected', val==='public');
+  document.getElementById('grpPrivPrivate').classList.toggle('selected', val==='private');
 }
 
 function openJoinGroup() {
@@ -2328,7 +2413,7 @@ async function createGroup() {
   // Create group
   const grpRes = await fetch(`${SB_URL}/rest/v1/groups`, {
     method:'POST', headers:hdrs,
-    body: JSON.stringify({ name, invite_code: code, created_by: _currentUser.id })
+    body: JSON.stringify({ name, invite_code: code, created_by: _currentUser.id, is_public: _newGroupIsPublic })
   });
   if (!grpRes.ok) {
     const err = await grpRes.text();
@@ -2432,16 +2517,118 @@ async function viewGroupLeaderboard(groupId, groupName) {
 function closeGroupModal() { document.getElementById('groupModal').classList.remove('open'); }
 
 // ─────────────────────────────────────
-//  NATIONAL LEADERBOARD
+//  GROUPS — tab switching
 // ─────────────────────────────────────
+function switchGroupTab(tab) {
+  ['mine','discover','players'].forEach(t => {
+    document.getElementById('grpTab-'+t)?.classList.toggle('active', t===tab);
+    const panel = document.getElementById('grpPanel-'+t);
+    if (panel) panel.style.display = t===tab ? 'block' : 'none';
+  });
+  if (tab === 'mine')     renderGroupsPage();
+  if (tab === 'discover') { document.getElementById('groupSearchResults').innerHTML = ''; document.getElementById('groupSearchInput').value = ''; }
+  if (tab === 'players')  { document.getElementById('playerSearchResults').innerHTML = ''; }
+}
+
+// ── Discover public groups ──
+let _groupSearchTimeout = null;
+async function searchPublicGroups() {
+  clearTimeout(_groupSearchTimeout);
+  _groupSearchTimeout = setTimeout(async () => {
+    const q = document.getElementById('groupSearchInput').value.trim();
+    const el = document.getElementById('groupSearchResults');
+    if (q.length < 2) { el.innerHTML = ''; return; }
+    el.innerHTML = '<p style="color:var(--cream-muted);font-size:0.85rem">Searching…</p>';
+    const { data, error } = await _supabase.from('groups').select('id,name,invite_code,is_public').ilike('name', `%${q}%`).eq('is_public', true).limit(20);
+    if (error || !data?.length) { el.innerHTML = '<p style="color:var(--cream-muted);font-size:0.85rem">No public groups found.</p>'; return; }
+    // Get member counts
+    el.innerHTML = data.map(g => {
+      const alreadyIn = _myGroups.some(mg => mg.id === g.id);
+      return `<div class="card" style="margin-bottom:0.75rem;display:flex;align-items:center;justify-content:space-between;gap:0.75rem;flex-wrap:wrap">
+        <div>
+          <div style="font-weight:700;font-size:0.95rem">${esc(g.name)}</div>
+          <div style="font-size:0.75rem;color:var(--cream-muted)">Code: ${esc(g.invite_code)}</div>
+        </div>
+        ${alreadyIn
+          ? '<span style="font-size:0.78rem;color:#6fcf97">✓ Already a member</span>'
+          : `<button class="btn btn-gold btn-sm" onclick="joinGroupById('${g.id}','${esc(g.name)}')">Join</button>`}
+      </div>`;
+    }).join('');
+  }, 400);
+}
+
+async function joinGroupById(groupId, groupName) {
+  const { error } = await _supabase.from('group_memberships').insert({ group_id: groupId, user_id: _currentUser.id, role: 'member' });
+  if (error?.message?.includes('unique')) { showToast('Already a member'); return; }
+  if (error) { showToast('❌ ' + error.message); return; }
+  showToast(`✅ Joined "${groupName}"!`);
+  await loadGroups();
+  searchPublicGroups();
+}
+
+// ── Find Players ──
+async function quickPlayerFilter(preset) {
+  document.querySelectorAll('#playerSearchQuickFilters .cond-pill').forEach(p=>p.classList.remove('selected'));
+  event.target.classList.add('selected');
+  const presets = {
+    beginner: { min: 18, max: 54 },
+    mid:      { min: 10, max: 18 },
+    low:      { min: 0,  max: 10 },
+    scratch:  { min: -10, max: 0 },
+  };
+  const p = presets[preset];
+  document.getElementById('playerHcpMin').value = p.min;
+  document.getElementById('playerHcpMax').value = p.max;
+  searchPlayers();
+}
+
+async function searchPlayers() {
+  const el = document.getElementById('playerSearchResults');
+  el.innerHTML = '<p style="color:var(--cream-muted);font-size:0.85rem">Searching…</p>';
+  const hcpMin = parseFloat(document.getElementById('playerHcpMin').value);
+  const hcpMax = parseFloat(document.getElementById('playerHcpMax').value);
+  const minRounds = parseInt(document.getElementById('playerMinRounds').value) || 1;
+
+  // Query national_leaderboard which has pre-aggregated stats
+  let query = _supabase.from('national_leaderboard').select('*').gte('rounds_played', minRounds);
+  const { data, error } = await query;
+  if (error || !data?.length) { el.innerHTML = '<p style="color:var(--cream-muted);font-size:0.85rem">No players found.</p>'; return; }
+
+  // Filter by HCP client-side (WHS hcp not in national_leaderboard view, use avg_score as proxy if needed)
+  let filtered = data.filter(p => p.anonymous_id !== _currentProfile?.anonymous_id);
+  if (!isNaN(hcpMin) && !isNaN(hcpMax)) {
+    filtered = filtered.filter(p => {
+      const hcp = p.whs_hcp ?? null;
+      if (hcp === null) return true; // include unknown
+      return hcp >= hcpMin && hcp <= hcpMax;
+    });
+  }
+
+  if (!filtered.length) { el.innerHTML = '<p style="color:var(--cream-muted);font-size:0.85rem">No players match those criteria.</p>'; return; }
+  filtered.sort((a,b) => (a.avg_score||999) - (b.avg_score||999));
+
+  el.innerHTML = filtered.slice(0, 30).map(p => {
+    const name = p.show_real_name && p.display_name ? p.display_name : p.anonymous_id;
+    return `<div style="background:var(--card-bg);border:1px solid var(--border);border-radius:10px;padding:0.85rem 1rem;margin-bottom:0.6rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5rem">
+      <div style="display:flex;align-items:center;gap:0.75rem">
+        <div style="width:34px;height:34px;border-radius:50%;background:${p.avatar_color||'#C9A84C'};display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;font-size:0.9rem;flex-shrink:0">${esc(name).charAt(0).toUpperCase()}</div>
+        <div>
+          <div style="font-weight:700;font-size:0.9rem">${esc(name)}</div>
+          <div style="font-size:0.75rem;color:var(--cream-muted)">${p.rounds_played} rounds · Avg ${p.avg_score||'—'} · Best ${p.best_score||'—'}${p.whs_hcp!=null?' · HCP '+(p.whs_hcp>0?'+':'')+p.whs_hcp:''}</div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
 async function renderNational() {
   const sortBy = document.getElementById('nationalSort')?.value || 'avg';
-  const el = document.getElementById('nationalBody');
+  const el = document.getElementById('leaderboardBody');
   el.innerHTML = '<p style="color:var(--cream-muted);font-size:0.85rem;padding:1rem">Loading…</p>';
 
   const { data, error } = await _supabase.from('national_leaderboard').select('*');
   if (error || !data?.length) {
     el.innerHTML = '<div class="empty-state"><div class="icon">🌍</div><p>No golfers on the leaderboard yet.</p></div>';
+    document.getElementById('lbChart').innerHTML = '';
     return;
   }
 
@@ -2452,22 +2639,21 @@ async function renderNational() {
   if (sortBy === 'putts')  sorted.sort((a,b) => (a.avg_putts||999) - (b.avg_putts||999));
   if (sortBy === 'beers')  sorted.sort((a,b) => b.total_beers - a.total_beers);
 
-  // Highlight current user
   const myAnonId = _currentProfile?.anonymous_id;
   const rc = i => i===0?'rank-1':i===1?'rank-2':i===2?'rank-3':'rank-n';
 
   el.innerHTML = `<table class="leaderboard-table">
-    <thead><tr>
-      <th>#</th><th>Handle</th><th>Rounds</th><th>Avg Score</th><th>Best</th><th>Avg Putts</th><th>🍺 Total</th>
-    </tr></thead>
+    <thead><tr><th>#</th><th>Golfer</th><th>Rounds</th><th>Avg Score</th><th>Best</th><th>Avg Putts</th><th>🍺 Total</th></tr></thead>
     <tbody>${sorted.map((r,i) => {
       const isMe = r.anonymous_id === myAnonId;
+      // Show real name if golfer opted in, otherwise show anonymous handle
+      const displayName = r.show_real_name && r.display_name ? r.display_name : r.anonymous_id;
       return `<tr style="${isMe?'background:rgba(201,168,76,0.08);':''}">
         <td><span class="rank-badge ${rc(i)}">${i+1}</span></td>
         <td>
           <div style="display:flex;align-items:center;gap:0.5rem">
             <div style="width:20px;height:20px;border-radius:50%;background:${r.avatar_color||'#C9A84C'};flex-shrink:0"></div>
-            <strong style="${isMe?'color:var(--gold)':''}">${esc(r.anonymous_id)}${isMe?' 👈':''}</strong>
+            <strong style="${isMe?'color:var(--gold)':''}">${esc(displayName)}${isMe?' 👈':''}</strong>
           </div>
         </td>
         <td>${r.rounds_played}</td>
@@ -2478,6 +2664,9 @@ async function renderNational() {
       </tr>`;
     }).join('')}</tbody>
   </table>`;
+
+  renderBarChart('lbChart', sorted.slice(0,10), r=>r.avg_score||0,
+    r => r.show_real_name && r.display_name ? r.display_name : r.anonymous_id, 'bar-fill-score', '');
 }
 
 
@@ -2601,7 +2790,7 @@ function startRealtime(){
       if(msg.event==='DELETE')_rounds=_rounds.filter(r=>r.id!==old?.id);
       if(document.getElementById('page-history').classList.contains('active'))renderHistory();
       if(document.getElementById('page-stats').classList.contains('active'))renderStats();
-      if(document.getElementById('page-leaderboard').classList.contains('active'))renderLeaderboard();
+      if(document.getElementById('page-leaderboard').classList.contains('active')){ if(_lbScope==='everyone')renderNational(); else renderLeaderboard(); }
     }
   };
   ws.onclose=()=>{setNavStatus('error');setTimeout(startRealtime,5000);};
@@ -2622,12 +2811,11 @@ function showPage(name,btn){
   else document.getElementById('btab-more')?.classList.add('active');
   if(name==='history')renderHistory();
   if(name==='stats')renderStats();
-  if(name==='leaderboard')renderLeaderboard();
+  if(name==='leaderboard'){ populateLbGroupPicker().then(()=>{ switchLbScope(_lbScope); }); }
   if(name==='golfers')renderGolferRoster();
   if(name==='clubs')renderClubs();
   if(name==='analytics'){syncAnalyticsFilter();renderAnalytics();}
   if(name==='groups')renderGroupsPage();
-  if(name==='national')renderNational();
   if(name==='profile')renderProfilePage();
   if(name==='admin')loadAdminData();
   if(name==='ai'){ switchAiMode('debrief'); }
@@ -4759,36 +4947,66 @@ function renderStats(){
 // ─────────────────────────────────────
 //  LEADERBOARD
 // ─────────────────────────────────────
-function renderLeaderboard(){
-  const sortBy=document.getElementById('lbSort').value;
-  const allNames=new Set([..._golfers.map(g=>g.name),..._rounds.map(r=>r.golfer).filter(Boolean)]);
-  let rows=Array.from(allNames).map(name=>{
-    const gr=_rounds.filter(r=>r.golfer===name&&r.score>0);
-    const allGr=_rounds.filter(r=>r.golfer===name);
-    const avg=gr.length?gr.reduce((s,r)=>s+r.score,0)/gr.length:Infinity;
-    const best=gr.length?gr.reduce((b,r)=>r.score<b.score?r:b).score:null;
-    const beers=allGr.reduce((s,r)=>s+r.beers,0);
-    const avgBeers=allGr.length?(beers/allGr.length).toFixed(1):'0';
-    const puttRounds=allGr.filter(r=>r.total_putts>0);
-    const avgPutts=puttRounds.length?(puttRounds.reduce((s,r)=>s+r.total_putts,0)/puttRounds.length).toFixed(1):'—';
-    const startHcp=_golfers.find(g=>g.name===name)?.handicap??'—';
-    const whsResult=calcWHS(allGr);
-    const whs=whsResult?whsResult.hcp:null;
-    return{name,avg,best,rounds:gr.length,beers,avgBeers,avgPutts,startHcp,whs};
-  }).filter(r=>r.rounds>0||_rounds.some(rd=>rd.golfer===r.name));
+// ─────────────────────────────────────
+//  BOARD — scope switching
+// ─────────────────────────────────────
+let _lbScope = 'group';
 
-  if(!rows.length){
-    document.getElementById('leaderboardBody').innerHTML=`<div class="empty-state"><div class="icon">🏆</div><p>No rounds yet.</p></div>`;
-    document.getElementById('lbChart').innerHTML='';return;
+function switchLbScope(scope) {
+  _lbScope = scope;
+  document.querySelectorAll('[id^="lbScope-"]').forEach(b => b.classList.remove('active'));
+  document.getElementById('lbScope-' + scope)?.classList.add('active');
+  document.getElementById('lbGroupControls').style.display   = scope === 'group'    ? 'block' : 'none';
+  document.getElementById('lbNationalControls').style.display = scope === 'everyone' ? 'block' : 'none';
+  if (scope === 'group')    renderLeaderboard();
+  if (scope === 'everyone') renderNational();
+}
+
+async function populateLbGroupPicker() {
+  await loadGroups();
+  const picker = document.getElementById('lbGroupPicker');
+  if (!picker) return;
+  picker.innerHTML = '<option value="">— All my groups combined —</option>' +
+    _myGroups.map(g => `<option value="${g.id}">${esc(g.name)}</option>`).join('');
+}
+
+function renderLeaderboard(){
+  const sortBy  = document.getElementById('lbSort')?.value || 'avg';
+  const groupId = document.getElementById('lbGroupPicker')?.value || '';
+  const el      = document.getElementById('leaderboardBody');
+  const chartTitle = document.getElementById('lbChartTitle');
+
+  // Build golfer list — either group members or all local golfers
+  let rows;
+  if (groupId && _myGroups.length) {
+    // We have group member data from viewGroupLeaderboard; re-use local _rounds
+    const grp = _myGroups.find(g => g.id === groupId);
+    if (chartTitle) chartTitle.textContent = `Avg Score — ${esc(grp?.name || 'Group')}`;
+    // For simplicity filter rounds by golfers in that group — group members are visible in _rounds
+    // since they share rounds under the same group_id
+    const groupRounds = _rounds.filter(r => r.group_id === groupId || !r.group_id);
+    const names = new Set(groupRounds.map(r => r.golfer).filter(Boolean));
+    rows = buildLbRows(names, _rounds);
+  } else {
+    if (chartTitle) chartTitle.textContent = 'Avg Score — All Golfers';
+    const allNames = new Set([..._golfers.map(g=>g.name),..._rounds.map(r=>r.golfer).filter(Boolean)]);
+    rows = buildLbRows(allNames, _rounds);
   }
+
+  if (!rows.length) {
+    el.innerHTML = `<div class="empty-state"><div class="icon">🏆</div><p>No rounds yet.</p></div>`;
+    document.getElementById('lbChart').innerHTML = ''; return;
+  }
+
   if(sortBy==='avg')   rows.sort((a,b)=>a.avg-b.avg);
   if(sortBy==='hcp')   rows.sort((a,b)=>(a.whs??999)-(b.whs??999));
   if(sortBy==='best')  rows.sort((a,b)=>(a.best||999)-(b.best||999));
   if(sortBy==='putts') rows.sort((a,b)=>(parseFloat(a.avgPutts)||999)-(parseFloat(b.avgPutts)||999));
   if(sortBy==='rounds')rows.sort((a,b)=>b.rounds-a.rounds);
   if(sortBy==='beers') rows.sort((a,b)=>b.beers-a.beers);
-  const rc=i=>i===0?'rank-1':i===1?'rank-2':i===2?'rank-3':'rank-n';
-  document.getElementById('leaderboardBody').innerHTML=`<table class="leaderboard-table">
+
+  const rc = i => i===0?'rank-1':i===1?'rank-2':i===2?'rank-3':'rank-n';
+  el.innerHTML = `<table class="leaderboard-table">
     <thead><tr><th>#</th><th>Golfer</th><th>Rounds</th><th>Avg Score</th><th>Best</th><th>WHS HCP</th><th>🟣 Avg Putts</th><th>🍺 Total</th></tr></thead>
     <tbody>${rows.map((r,i)=>`<tr>
       <td><span class="rank-badge ${rc(i)}">${i+1}</span></td>
@@ -4800,7 +5018,21 @@ function renderLeaderboard(){
       <td style="color:#a78bfa">${r.avgPutts}</td>
       <td style="color:var(--amber)">${r.beers}</td>
     </tr>`).join('')}</tbody></table>`;
-  renderBarChart('lbChart',rows.filter(r=>r.avg!==Infinity),r=>Math.round(r.avg),r=>r.name,'bar-fill-score','');
+  renderBarChart('lbChart', rows.filter(r=>r.avg!==Infinity), r=>Math.round(r.avg), r=>r.name, 'bar-fill-score', '');
+}
+
+function buildLbRows(names, rounds) {
+  return Array.from(names).map(name => {
+    const gr    = rounds.filter(r=>r.golfer===name&&r.score>0);
+    const allGr = rounds.filter(r=>r.golfer===name);
+    const avg   = gr.length ? gr.reduce((s,r)=>s+r.score,0)/gr.length : Infinity;
+    const best  = gr.length ? gr.reduce((b,r)=>r.score<b.score?r:b).score : null;
+    const beers = allGr.reduce((s,r)=>s+r.beers,0);
+    const puttRounds = allGr.filter(r=>r.total_putts>0);
+    const avgPutts = puttRounds.length ? (puttRounds.reduce((s,r)=>s+r.total_putts,0)/puttRounds.length).toFixed(1) : '—';
+    const whs   = calcWHS(allGr)?.hcp ?? null;
+    return { name, avg, best, rounds: gr.length, beers, avgPutts, whs };
+  }).filter(r => r.rounds > 0);
 }
 
 // ─────────────────────────────────────
