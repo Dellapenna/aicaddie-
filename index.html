@@ -1777,8 +1777,14 @@ nav { padding: 0.8rem 1rem !important; }
         <div style="font-size:0.82rem;color:var(--cream-muted)">Points-based scoring. Eagle = 4pts, Birdie = 3pts, Par = 2pts, Bogey = 1pt. Handicap adjusted.</div>
         <div id="game-resume-stableford" style="display:none;margin-top:0.75rem;font-size:0.78rem;color:#6fcf97;font-weight:600">▶ Game in progress</div>
       </div>
+      <div class="card" style="cursor:pointer;border-color:rgba(155,89,182,0.3)" onclick="launchGame('nines')">
+        <div style="font-size:2rem;margin-bottom:0.5rem">9️⃣</div>
+        <div style="font-family:'Playfair Display',serif;font-size:1.1rem;color:#c084fc;margin-bottom:0.3rem">Nines</div>
+        <div style="font-size:0.82rem;color:var(--cream-muted)">3 players only. 9 points per hole — 5 for best score, 3 for 2nd, 1 for last. Ties split the points.</div>
+        <div id="game-resume-nines" style="display:none;margin-top:0.75rem;font-size:0.78rem;color:#6fcf97;font-weight:600">▶ Game in progress</div>
+      </div>
     </div>
-    <p style="font-size:0.75rem;color:var(--cream-muted);text-align:center">More games coming soon</p>
+    <p style="font-size:0.75rem;color:var(--cream-muted);text-align:center;margin-bottom:1rem">More games coming soon</p>
   </div>
 
   <!-- Game overlay iframe -->
@@ -6889,12 +6895,14 @@ const GAME_KEYS = {
   skins:      'caddie_game_skins',
   matchplay:  'caddie_game_matchplay',
   stableford: 'caddie_game_stableford',
+  nines:      'caddie_game_nines',
 };
 const GAME_TITLES = {
   wolf:       '🐺 Wolf',
   skins:      '💰 Skins',
   matchplay:  '⚔️ Match Play',
   stableford: '🎯 Stableford',
+  nines:      '9️⃣ Nines',
 };
 
 function renderGamesPage() {
