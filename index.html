@@ -2275,9 +2275,20 @@ async function saveProfile() {
   const optOut = document.getElementById('profileOptOut').checked;
   const showRealName = document.getElementById('profileShowRealName').checked;
   if (!name) { showToast('Name cannot be empty'); return; }
-  const { error } = await _supabase.from('golfer_profiles').update({
+
+  // Try saving with show_real_name; if column doesn't exist yet, retry without it
+  let error;
+  ({ error } = await _supabase.from('golfer_profiles').update({
     display_name: name, avatar_color: _onboardColor, national_lb_opt_out: optOut, show_real_name: showRealName
-  }).eq('id', _currentUser.id);
+  }).eq('id', _currentUser.id));
+
+  if (error && (error.code === 'PGRST204' || error.message?.includes('show_real_name') || error.code === '42703')) {
+    // Column doesn't exist yet — save without it
+    ({ error } = await _supabase.from('golfer_profiles').update({
+      display_name: name, avatar_color: _onboardColor, national_lb_opt_out: optOut
+    }).eq('id', _currentUser.id));
+  }
+
   if (error) { showToast('❌ ' + error.message); return; }
   _currentProfile.display_name  = name;
   _currentProfile.avatar_color  = _onboardColor;
