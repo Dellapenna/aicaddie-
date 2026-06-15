@@ -779,7 +779,7 @@ nav { padding: 0.8rem 1rem !important; }
       <button class="more-item" onclick="showPage('golfers',null);toggleMoreMenu()"><span>👤</span> Golfers</button>
       <button class="more-item" onclick="showPage('groups',null);toggleMoreMenu()"><span>👥</span> Groups</button>
       <button class="more-item" onclick="showPage('cartgirl',null);toggleMoreMenu()"><span>🍺</span> Cart Girl</button>
-      <button class="more-item" onclick="launchGame('https://wolfcaddie.netlify.app/');toggleMoreMenu()"><span>🎮</span> Games</button>
+      <button class="more-item" onclick="showPage('games',null);toggleMoreMenu()"><span>🎮</span> Games</button>
       <button class="more-item" id="moreAdminBtn" style="display:none" onclick="showPage('admin',null);toggleMoreMenu()"><span>🔑</span> Admin</button>
     </div>
     <div style="margin-top:0.75rem;padding-top:0.75rem;border-top:1px solid var(--border);display:flex;gap:0.6rem">
@@ -1738,6 +1738,48 @@ nav { padding: 0.8rem 1rem !important; }
     <div id="cgLoadMoreWrap" style="display:none;margin-top:1rem;text-align:center">
       <button class="btn btn-outline btn-sm" onclick="loadCartGirlSightings(true)">Load more</button>
     </div>
+  </div>
+
+  <!-- GAMES -->
+  <div id="page-games" class="page">
+    <div class="page-header">🎮 Games</div>
+    <p style="font-size:0.85rem;color:var(--cream-muted);margin-bottom:1.5rem">Money games to play with your crew. Your game is saved if you leave mid-round.</p>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1rem;margin-bottom:2rem">
+      <div class="card" style="cursor:pointer;border-color:rgba(212,168,67,0.3)" onclick="launchGame('wolf')">
+        <div style="font-size:2rem;margin-bottom:0.5rem">🐺</div>
+        <div style="font-family:'Playfair Display',serif;font-size:1.1rem;color:var(--gold);margin-bottom:0.3rem">Wolf</div>
+        <div style="font-size:0.82rem;color:var(--cream-muted)">2–6 players. Rotating wolf picks partners each hole. Blind wolf, hammers, lone wolf supported.</div>
+        <div id="game-resume-wolf" style="display:none;margin-top:0.75rem;font-size:0.78rem;color:#6fcf97;font-weight:600">▶ Game in progress</div>
+      </div>
+      <div class="card" style="cursor:pointer;border-color:rgba(212,168,67,0.3)" onclick="launchGame('skins')">
+        <div style="font-size:2rem;margin-bottom:0.5rem">💰</div>
+        <div style="font-family:'Playfair Display',serif;font-size:1.1rem;color:var(--gold);margin-bottom:0.3rem">Skins</div>
+        <div style="font-size:0.82rem;color:var(--cream-muted)">2–6 players. Win each hole outright to claim the skin. Carryover on ties. Handicap support.</div>
+        <div id="game-resume-skins" style="display:none;margin-top:0.75rem;font-size:0.78rem;color:#6fcf97;font-weight:600">▶ Game in progress</div>
+      </div>
+      <div class="card" style="cursor:pointer;border-color:rgba(58,123,213,0.3)" onclick="launchGame('matchplay')">
+        <div style="font-size:2rem;margin-bottom:0.5rem">⚔️</div>
+        <div style="font-family:'Playfair Display',serif;font-size:1.1rem;color:#6ea8f7;margin-bottom:0.3rem">Match Play</div>
+        <div style="font-size:0.82rem;color:var(--cream-muted)">Singles or team match play with handicaps. Nassau side bet included. Hole-by-hole result tracking.</div>
+        <div id="game-resume-matchplay" style="display:none;margin-top:0.75rem;font-size:0.78rem;color:#6fcf97;font-weight:600">▶ Game in progress</div>
+      </div>
+      <div class="card" style="cursor:pointer;border-color:rgba(167,139,250,0.3)" onclick="launchGame('stableford')">
+        <div style="font-size:2rem;margin-bottom:0.5rem">🎯</div>
+        <div style="font-family:'Playfair Display',serif;font-size:1.1rem;color:#a78bfa;margin-bottom:0.3rem">Stableford</div>
+        <div style="font-size:0.82rem;color:var(--cream-muted)">Points-based scoring. Eagle = 4pts, Birdie = 3pts, Par = 2pts, Bogey = 1pt. Handicap adjusted.</div>
+        <div id="game-resume-stableford" style="display:none;margin-top:0.75rem;font-size:0.78rem;color:#6fcf97;font-weight:600">▶ Game in progress</div>
+      </div>
+    </div>
+    <p style="font-size:0.75rem;color:var(--cream-muted);text-align:center">More games coming soon</p>
+  </div>
+
+  <!-- Game overlay iframe -->
+  <div id="gameOverlay" style="display:none;position:fixed;inset:0;z-index:500;background:#0a1f14;flex-direction:column">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:0.6rem 1rem;background:rgba(0,0,0,0.4);border-bottom:1px solid rgba(255,255,255,0.1);flex-shrink:0">
+      <span id="gameOverlayTitle" style="font-size:0.88rem;color:var(--cream-muted)">Game</span>
+      <button onclick="closeGameOverlay()" style="background:none;border:1px solid rgba(255,255,255,0.15);color:var(--cream-muted);border-radius:6px;padding:0.3rem 0.85rem;cursor:pointer;font-size:0.82rem;font-family:Inter,sans-serif">✕ Exit Game</button>
+    </div>
+    <iframe id="gameFrame" style="flex:1;border:none;width:100%;height:100%" src="" title="Game"></iframe>
   </div>
 
   <!-- ADMIN DASHBOARD -->
@@ -3140,6 +3182,7 @@ function showPage(name,btn){
   if(name==='profile')renderProfilePage();
   if(name==='admin')loadAdminData();
   if(name==='cartgirl')loadCartGirlSightings();
+  if(name==='games')renderGamesPage();
   if(name==='ai'){ switchAiMode('debrief'); }
   if(name==='new-round'){ lsCheckResume(); }
   if(name!=='new-round') stopQrScan();
@@ -6819,8 +6862,61 @@ function adminViewUser(userId) {
   document.getElementById('groupModal').classList.add('open');
 }
 
-function launchGame(url) {
-  window.open(url, '_blank');
+const GAME_KEYS = {
+  wolf:       'caddie_game_wolf',
+  skins:      'caddie_game_skins',
+  matchplay:  'caddie_game_matchplay',
+  stableford: 'caddie_game_stableford',
+};
+const GAME_TITLES = {
+  wolf:       '🐺 Wolf',
+  skins:      '💰 Skins',
+  matchplay:  '⚔️ Match Play',
+  stableford: '🎯 Stableford',
+};
+
+function renderGamesPage() {
+  // Check each game's localStorage for in-progress state
+  Object.keys(GAME_KEYS).forEach(game => {
+    const badge = document.getElementById('game-resume-' + game);
+    if (!badge) return;
+    try {
+      const saved = localStorage.getItem(GAME_KEYS[game]);
+      if (saved) {
+        const G = JSON.parse(saved);
+        const holesIn = G.holes?.length || 0;
+        if (holesIn > 0) {
+          badge.textContent = `▶ In progress — Hole ${G.currentHole} of ${G.numHoles}`;
+          badge.style.display = 'block';
+          return;
+        }
+      }
+    } catch(e) {}
+    badge.style.display = 'none';
+  });
+}
+
+function launchGame(game) {
+  const overlay = document.getElementById('gameOverlay');
+  const frame   = document.getElementById('gameFrame');
+  const title   = document.getElementById('gameOverlayTitle');
+  // Set iframe src only if it's a different game (avoid reload)
+  const src = `/${game}.html`;
+  if (frame.dataset.game !== game) {
+    frame.src = src;
+    frame.dataset.game = game;
+  }
+  title.textContent = GAME_TITLES[game] || game;
+  overlay.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+
+function closeGameOverlay() {
+  const overlay = document.getElementById('gameOverlay');
+  overlay.style.display = 'none';
+  document.body.style.overflow = '';
+  // Refresh the games page badges so "in progress" indicators update
+  renderGamesPage();
 }
 
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
