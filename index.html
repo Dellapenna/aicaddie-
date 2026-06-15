@@ -868,8 +868,15 @@ nav { padding: 0.8rem 1rem !important; }
 
   <!-- NEW ROUND -->
   <div id="page-new-round" class="page active">
-    <div class="card" style="margin-bottom:1.5rem">
-      <div class="card-title">Round Details</div>
+    <div class="expand-card open" id="expandRoundDetails" style="margin-bottom:1.5rem">
+      <div class="expand-header" onclick="toggleExpand('expandRoundDetails')">
+        <div class="expand-title">
+          ⛳ Round Details
+          <span id="roundDetailsSummary" style="font-family:'Inter',sans-serif;font-size:0.78rem;font-weight:400;color:var(--cream-muted);margin-left:0.5rem"></span>
+        </div>
+        <span class="expand-chevron">▼</span>
+      </div>
+      <div class="expand-body" style="padding:1.25rem">
       <div class="form-row">
         <div class="form-group">
           <label>Golfers <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--cream-muted)">(select one or more for a group round)</span></label>
@@ -996,7 +1003,8 @@ nav { padding: 0.8rem 1rem !important; }
         <div style="font-size:0.82rem;color:var(--cream-muted)">On the course? Use live scoring for easier hole-by-hole entry.</div>
         <button class="btn btn-green" onclick="launchLiveScore()">⛳ Live Scoring Mode</button>
       </div>
-    </div>
+      </div><!-- end expand-body -->
+    </div><!-- end expand-card -->
 
     <div class="card">
       <div class="card-title">Scorecard</div>
@@ -2621,6 +2629,7 @@ function applyCourse(course){
   setStatus('success',`✓ Pars loaded from ${ft?.tee_name||'course'} tee`);
   setTimeout(()=>setStatus('',''),4000);
   buildScorecard(); lockPars(true);
+  updateRoundDetailsSummary(true);
 }
 function teePillHtml(tee,idx,selected){
   const name=tee.tee_name||'Unknown';
@@ -2631,6 +2640,7 @@ function selectTeeByIdx(pill){
   document.querySelectorAll('.tee-pill').forEach(p=>p.classList.remove('selected')); pill.classList.add('selected');
   const all=[...(selectedCourse?.tees?.male||[]).map(t=>({...t,gender:'Male'})),...(selectedCourse?.tees?.female||[]).map(t=>({...t,gender:'Female'}))];
   selectedTee=all[parseInt(pill.dataset.idx)]||null; buildScorecard(); lockPars(true);
+  updateRoundDetailsSummary(true);
 }
 function clearCourse(){
   selectedCourse=null;selectedTee=null;
@@ -2638,6 +2648,28 @@ function clearCourse(){
   document.getElementById('courseInfoBanner').style.display='none';
   document.getElementById('teeWrap').style.display='none';
   showManualTee();setStatus('','');buildScorecard();lockPars(false);
+  updateRoundDetailsSummary(false);
+}
+function updateRoundDetailsSummary(collapse) {
+  const card    = document.getElementById('expandRoundDetails');
+  const summary = document.getElementById('roundDetailsSummary');
+  if (!card || !summary) return;
+  const course  = selectedCourse ? (selectedCourse.club_name || selectedCourse.course_name) : (document.getElementById('courseSearch')?.value?.trim() || '');
+  const tee     = selectedTee?.tee_name || '';
+  const date    = document.getElementById('roundDate')?.value || '';
+  const golfers = selectedGolfers.length ? selectedGolfers.join(', ') : '';
+  const holes   = document.getElementById('holesCount')?.value || '18';
+  if (course) {
+    const parts = [course, tee, holes + ' holes', date, golfers].filter(Boolean);
+    summary.textContent = '· ' + parts.join(' · ');
+    if (collapse) {
+      card.classList.add('open'); // ensure open first so CSS transition works
+      setTimeout(() => card.classList.remove('open'), 50);
+    }
+  } else {
+    summary.textContent = '';
+    if (!card.classList.contains('open')) card.classList.add('open');
+  }
 }
 function showManualTee(){document.getElementById('manualTeeWrap').style.display='flex';}
 function closeDropdown(){document.getElementById('courseDropdown').style.display='none';}
@@ -2941,6 +2973,11 @@ function clearScorecard(){
     if(sc){sc.classList.remove('active','scratch-active');}
     beerState[h]=false;girState[h]=false;hazardState[h]=false;scratchState[h]=false;
   }
+  // Re-open Round Details so user can set up a new round
+  const card = document.getElementById('expandRoundDetails');
+  if (card) card.classList.add('open');
+  const summary = document.getElementById('roundDetailsSummary');
+  if (summary) summary.textContent = '';
   updateLiveSummary();
 }
 
