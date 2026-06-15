@@ -3734,11 +3734,17 @@ async function saveBag() {
 
     // Step 2: re-insert if there are clubs
     if (_bagClubs.length) {
-      const rows = _bagClubs.map((c, i) => {
-        const row = { ...c, user_id: _currentUser.id, sort_order: i };
-        delete row.id; // let Supabase generate new IDs
-        return row;
-      });
+      // Normalize every row to identical keys — PostgREST requires this for batch inserts
+      const rows = _bagClubs.map((c, i) => ({
+        user_id:     _currentUser.id,
+        sort_order:  i,
+        club_type:   c.club_type   || 'Driver',
+        brand:       c.brand       || null,
+        model:       c.model       || null,
+        shaft:       c.shaft       || null,
+        flex:        c.flex        || null,
+        carry_yards: c.carry_yards != null ? parseInt(c.carry_yards) : null,
+      }));
       const insRes = await fetch(
         `${SB_URL}/rest/v1/bag_clubs`,
         { method: 'POST', headers: { ...hdrs, 'Prefer': 'return=representation' }, body: JSON.stringify(rows) }
