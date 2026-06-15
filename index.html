@@ -1699,6 +1699,10 @@ nav { padding: 0.8rem 1rem !important; }
           <button class="btn btn-ai" onclick="runDebrief()">🤖 Debrief This Round</button>
         </div>
         <div id="aiDebriefOutput" style="display:none"></div>
+        <div id="aiDebriefActions" style="display:none;gap:0.75rem;flex-wrap:wrap;justify-content:flex-end;margin-top:0.5rem">
+          <button class="btn btn-outline btn-sm" onclick="downloadDebrief('debrief')">⬇️ Download Debrief</button>
+          <button class="btn btn-outline btn-sm" onclick="printDebrief('debrief')">🖨️ Print Debrief</button>
+        </div>
       </div>
 
       <!-- CHAT MODE -->
@@ -1726,6 +1730,7 @@ nav { padding: 0.8rem 1rem !important; }
         <div class="card" style="border-color:rgba(167,139,250,0.25)">
           <div class="card-title" style="color:#a78bfa">⛳ Pre-Round Briefing</div>
           <p style="font-size:0.85rem;color:var(--cream-muted);margin-bottom:1rem">Tell your caddie where you're playing and get a personalised game plan based on your tendencies.</p>
+          <div id="aiPreCourseInfo" style="display:none;background:rgba(201,168,76,0.08);border:1px solid rgba(201,168,76,0.2);border-radius:8px;padding:0.65rem 0.9rem;margin-bottom:0.75rem;font-size:0.82rem;color:var(--gold)"></div>
           <div class="form-group" style="margin-bottom:0.75rem">
             <label>Course / Conditions</label>
             <input type="text" id="aiPreCourse" placeholder="e.g. Bethpage Black, windy, firm greens" />
@@ -1737,6 +1742,10 @@ nav { padding: 0.8rem 1rem !important; }
           <button class="btn btn-ai" onclick="runPreRound()">🤖 Get My Game Plan</button>
         </div>
         <div id="aiPreRoundOutput" style="display:none"></div>
+        <div id="aiPreRoundActions" style="display:none;display:flex;gap:0.75rem;flex-wrap:wrap;justify-content:flex-end;margin-top:0.5rem">
+          <button class="btn btn-outline btn-sm" onclick="downloadDebrief('preround')">⬇️ Download Briefing</button>
+          <button class="btn btn-outline btn-sm" onclick="printDebrief('preround')">🖨️ Print Briefing</button>
+        </div>
       </div>
 
     </div>
@@ -3966,6 +3975,7 @@ function switchAiMode(mode) {
   document.getElementById('aiPanel-' + mode).style.flexDirection = 'column';
   document.getElementById('aiPanel-' + mode).style.gap = '1rem';
   if (mode === 'debrief') populateDebriefPicker();
+  if (mode === 'preround') populatePreRoundCourseInfo();
 }
 
 // ── Context builder — assembles golfer profile into a rich system prompt ──
@@ -4175,7 +4185,10 @@ Structure your debrief with these sections:
 Keep it specific to my actual numbers and my known tendencies. Be a real caddie, not a generic coach.`;
 
   const outputEl = document.getElementById('aiDebriefOutput');
-  await callCaddieStreaming([{ role:'user', content: prompt }], outputEl);
+  const actionsEl = document.getElementById('aiDebriefActions');
+  if (actionsEl) actionsEl.style.display = 'none';
+  const text = await callCaddieStreaming([{ role:'user', content: prompt }], outputEl);
+  if (text && actionsEl) actionsEl.style.display = 'flex';
 }
 
 // Auto-debrief trigger after saving a round
@@ -4260,16 +4273,69 @@ function askSuggested(el) {
   sendChatMessage();
 }
 
+// ── Populate pre-round course info banner from selected course ──
+function populatePreRoundCourseInfo() {
+  const banner = document.getElementById('aiPreCourseInfo');
+  const input  = document.getElementById('aiPreCourse');
+  if (!banner || !input) return;
+
+  if (selectedCourse) {
+    const name = selectedCourse.club_name || selectedCourse.course_name || '';
+    const tee  = selectedTee ? selectedTee.tee_name : null;
+    const slope = selectedTee?.slope_rating || null;
+    const rating = selectedTee?.course_rating || null;
+    banner.style.display = 'block';
+    banner.innerHTML = `⛳ Auto-filled from your round setup: <strong>${esc(name)}</strong>${tee ? ' · ' + esc(tee) + ' tees' : ''}${slope ? ' · Slope ' + slope : ''}${rating ? ' · Rating ' + rating : ''}`;
+    // Pre-fill the text box if it's empty
+    if (!input.value.trim()) {
+      input.value = name + (tee ? ', ' + tee + ' tees' : '');
+    }
+  } else {
+    banner.style.display = 'none';
+  }
+}
+
+// ── Build full course context string for pre-round prompt ──
+function buildPreRoundCourseContext() {
+  if (!selectedCourse) return null;
+
+  const name  = selectedCourse.club_name || selectedCourse.course_name || 'Unknown Course';
+  const tee   = selectedTee?.tee_name || null;
+  const slope = selectedTee?.slope_rating || null;
+  const rating = selectedTee?.course_rating || null;
+
+  let courseStr = `Course: ${name}`;
+  if (tee)    courseStr += `\nTee Box: ${tee}`;
+  if (slope)  courseStr += `\nSlope Rating: ${slope}`;
+  if (rating) courseStr += `\nCourse Rating: ${rating}`;
+
+  // Hole-by-hole data if available
+  if (selectedTee?.holes?.length) {
+    courseStr += '\n\nHole Data:';
+    selectedTee.holes.forEach(h => {
+      courseStr += `\n  Hole ${h.hole_number}: Par ${h.par}${h.yardage ? ', ' + h.yardage + ' yds' : ''}${h.handicap ? ', SI ' + h.handicap : ''}`;
+    });
+    const totalPar = selectedTee.holes.reduce((s,h) => s + (h.par||0), 0);
+    const totalYards = selectedTee.holes.reduce((s,h) => s + (h.yardage||0), 0);
+    courseStr += `\nTotal: Par ${totalPar}${totalYards ? ', ' + totalYards + ' yds' : ''}`;
+  }
+
+  return courseStr;
+}
+
 // ── PRE-ROUND ──
 async function runPreRound() {
   const course = document.getElementById('aiPreCourse').value.trim();
   const notes  = document.getElementById('aiPreNotes').value.trim();
   if (!course) { showToast('Tell your caddie where you\'re playing'); return; }
 
+  const courseContext = buildPreRoundCourseContext();
+
   const prompt = `I'm about to play a round. Please give me a personalised pre-round game plan.
 
-Course / Conditions: ${course}
-Extra context: ${notes || 'none'}
+${courseContext ? courseContext : 'Course / Conditions: ' + course}
+${!courseContext ? '' : 'Additional context: ' + course}
+${notes ? 'Extra notes: ' + notes : ''}
 
 Structure your briefing with:
 ### 🏌️ Tee Strategy
@@ -4277,10 +4343,83 @@ Structure your briefing with:
 ### ⛳ Around the Greens
 ### 🧠 Mental Game Plan
 
-Be specific to my tendencies and stats. Tell me what to watch out for and how to play to my strengths today.`;
+Be specific to my tendencies, stats, and bag distances. Call out any specific holes if you have the hole data. Tell me what to watch out for and how to play to my strengths today.`;
 
   const outputEl = document.getElementById('aiPreRoundOutput');
-  await callCaddieStreaming([{ role:'user', content: prompt }], outputEl);
+  const actionsEl = document.getElementById('aiPreRoundActions');
+  if (actionsEl) actionsEl.style.display = 'none';
+  const text = await callCaddieStreaming([{ role:'user', content: prompt }], outputEl);
+  if (text && actionsEl) actionsEl.style.display = 'flex';
+}
+
+// ── Print / Download AI output ──
+function getAiOutputText(mode) {
+  const el = document.getElementById(mode === 'debrief' ? 'aiDebriefOutput' : 'aiPreRoundOutput');
+  return el ? el.innerHTML : '';
+}
+
+function getAiOutputTitle(mode) {
+  if (mode === 'debrief') {
+    const picker = document.getElementById('aiDebriefRoundPicker');
+    const sel = picker?.options[picker.selectedIndex]?.text || 'Round';
+    return 'Round Debrief — ' + sel;
+  }
+  const course = document.getElementById('aiPreCourse')?.value?.trim() || 'Pre-Round Briefing';
+  return 'Pre-Round Briefing — ' + course;
+}
+
+function printDebrief(mode) {
+  const content = getAiOutputText(mode);
+  if (!content) { showToast('No content to print yet'); return; }
+  const title = getAiOutputTitle(mode);
+  const name = _currentProfile?.display_name || '';
+  const win = window.open('', '_blank');
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${title}</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+  <style>
+    body{font-family:Inter,sans-serif;max-width:700px;margin:2rem auto;padding:0 1.5rem;color:#1a1a1a;line-height:1.7}
+    h1{font-family:'Playfair Display',serif;color:#1B3A2D;font-size:1.4rem;border-bottom:2px solid #C9A84C;padding-bottom:0.5rem;margin-bottom:0.25rem}
+    .meta{font-size:0.8rem;color:#666;margin-bottom:1.5rem}
+    h3{color:#1B3A2D;margin-top:1.5rem;margin-bottom:0.35rem}
+    ul{padding-left:1.25rem}li{margin-bottom:0.3rem}
+    strong{color:#1B3A2D}
+    @media print{body{margin:1rem}}
+  </style></head><body>
+  <h1>⛳ The Caddie — ${esc(title)}</h1>
+  <div class="meta">${name ? 'Golfer: ' + esc(name) + ' · ' : ''}${new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'})}</div>
+  ${content}
+  </body></html>`);
+  win.document.close();
+  win.focus();
+  setTimeout(() => win.print(), 500);
+}
+
+function downloadDebrief(mode) {
+  const content = getAiOutputText(mode);
+  if (!content) { showToast('No content to download yet'); return; }
+  const title = getAiOutputTitle(mode);
+  const name = _currentProfile?.display_name || '';
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${title}</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+  <style>
+    body{font-family:Inter,sans-serif;max-width:700px;margin:2rem auto;padding:0 1.5rem;color:#1a1a1a;line-height:1.7;background:#fff}
+    h1{font-family:'Playfair Display',serif;color:#1B3A2D;font-size:1.4rem;border-bottom:2px solid #C9A84C;padding-bottom:0.5rem;margin-bottom:0.25rem}
+    .meta{font-size:0.8rem;color:#666;margin-bottom:1.5rem}
+    h3{color:#1B3A2D;margin-top:1.5rem;margin-bottom:0.35rem}
+    ul{padding-left:1.25rem}li{margin-bottom:0.3rem}
+    strong{color:#1B3A2D}
+  </style></head><body>
+  <h1>⛳ The Caddie — ${esc(title)}</h1>
+  <div class="meta">${name ? 'Golfer: ' + esc(name) + ' · ' : ''}${new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'})}</div>
+  ${content}
+  </body></html>`;
+  const blob = new Blob([html], { type: 'text/html' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = title.replace(/[^a-z0-9]/gi,'_').toLowerCase() + '.html';
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 // ── Populate AI debrief picker when AI page is shown ──
@@ -4543,9 +4682,51 @@ function renderClubs() {
   const level  = document.getElementById('clubLevel').value;
   const grid   = document.getElementById('clubGrid');
 
-  grid.innerHTML = CLUBS.map(c => {
+  // Map bag clubs to a lookup by club type for quick access
+  const bagMap = {};
+  (_bagClubs || []).forEach(c => {
+    if (c.carry_yards) bagMap[c.club_type] = c;
+  });
+
+  // Club type name → CLUBS entry matcher
+  const matchBag = (clubId) => {
+    const typeMatchers = {
+      'driver':  ['Driver'],
+      '3wood':   ['3 Wood'],
+      'hybrid':  ['Hybrid'],
+      '4-6iron': ['4 Iron','5 Iron','6 Iron'],
+      '7-9iron': ['7 Iron','8 Iron','9 Iron'],
+      'pw':      ['PW'],
+      'aw':      ['GW'],
+      'sw':      ['SW'],
+      'lw':      ['LW'],
+      'putter':  ['Putter'],
+    };
+    const types = typeMatchers[clubId] || [];
+    return types.map(t => bagMap[t]).filter(Boolean);
+  };
+
+  // "Your Bag" banner at top if bag data exists
+  const hasBag = Object.keys(bagMap).length > 0;
+  let bagBanner = '';
+  if (hasBag) {
+    const bagItems = (_bagClubs || []).filter(c => c.carry_yards).map(c =>
+      `<span style="background:rgba(201,168,76,0.15);border:1px solid rgba(201,168,76,0.3);border-radius:6px;padding:0.2rem 0.5rem;font-size:0.75rem;white-space:nowrap"><strong style="color:var(--gold)">${esc(c.club_type)}</strong> <span style="color:var(--cream)">${c.carry_yards}y</span></span>`
+    ).join('');
+    bagBanner = `<div style="background:rgba(201,168,76,0.06);border:1px solid rgba(201,168,76,0.2);border-radius:10px;padding:0.85rem 1rem;margin-bottom:1.25rem">
+      <div style="font-size:0.72rem;font-weight:600;color:var(--cream-muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.5rem">🎒 Your Bag — Carry Distances</div>
+      <div style="display:flex;flex-wrap:wrap;gap:0.4rem">${bagItems}</div>
+      <div style="font-size:0.72rem;color:var(--cream-muted);margin-top:0.5rem">Update in Profile → My Bag</div>
+    </div>`;
+  }
+
+  grid.innerHTML = bagBanner + CLUBS.map(c => {
     const dist = c.dist[gender][level];
-    const distLabel = c.id === 'putter' ? '' : `${dist} <span>yds</span>`;
+    const myClubs = matchBag(c.id);
+    const myDistHtml = myClubs.length
+      ? myClubs.map(mc => `<div style="background:rgba(201,168,76,0.15);border:1px solid rgba(201,168,76,0.4);border-radius:6px;padding:0.25rem 0.6rem;font-size:0.78rem;font-weight:700;color:var(--gold)">🎒 Your ${esc(mc.club_type)}: ${mc.carry_yards} yds</div>`).join('')
+      : '';
+
     return `<div class="club-card" id="cc_${c.id}" onclick="toggleClub('${c.id}')">
       <div class="club-header">
         <div class="club-icon">${c.icon}</div>
@@ -4554,6 +4735,8 @@ function renderClubs() {
       </div>
       <div class="club-body">
         <div class="club-body-inner">
+          ${myDistHtml ? `<div style="display:flex;flex-wrap:wrap;gap:0.4rem;margin-bottom:0.75rem">${myDistHtml}</div>` : ''}
+          ${myDistHtml ? `<div style="font-size:0.72rem;color:var(--cream-muted);margin-bottom:0.75rem">Typical range for ${level}: <strong style="color:var(--cream)">${dist} yds</strong></div>` : ''}
           <div class="club-detail"><div class="club-detail-label">Ball Position</div><div class="club-detail-val">${c.ballPos}</div></div>
           <div class="club-detail"><div class="club-detail-label">Stance Width</div><div class="club-detail-val">${c.stance}</div></div>
           <div class="club-detail"><div class="club-detail-label">Weight</div><div class="club-detail-val">${c.weight}</div></div>
