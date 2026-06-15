@@ -3122,7 +3122,7 @@ function showPage(name,btn){
   if(name==='stats')renderStats();
   if(name==='leaderboard'){ populateLbGroupPicker().then(()=>{ switchLbScope(_lbScope); }); }
   if(name==='golfers')renderGolferRoster();
-  if(name==='clubs')renderClubs();
+  if(name==='clubs'){ loadBag().then(()=>renderClubs()); }
   if(name==='analytics'){syncAnalyticsFilter();renderAnalytics();}
   if(name==='groups')renderGroupsPage();
   if(name==='profile')renderProfilePage();
