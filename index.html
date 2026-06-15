@@ -1940,6 +1940,7 @@ nav { padding: 0.8rem 1rem !important; }
         <button class="ai-mode-btn active" id="aiMode-debrief"  onclick="switchAiMode('debrief')">📊 Debrief</button>
         <button class="ai-mode-btn"        id="aiMode-chat"     onclick="switchAiMode('chat')">💬 Ask Caddie</button>
         <button class="ai-mode-btn"        id="aiMode-preround" onclick="switchAiMode('preround')">⛳ Pre-Round</button>
+        <button class="ai-mode-btn"        id="aiMode-range"    onclick="switchAiMode('range')">🏌️ Range</button>
       </div>
 
       <!-- DEBRIEF MODE -->
@@ -2072,6 +2073,75 @@ nav { padding: 0.8rem 1rem !important; }
         <div id="aiPreRoundActions" style="display:none;gap:0.75rem;flex-wrap:wrap;justify-content:flex-end;margin-top:0.5rem">
           <button class="btn btn-outline btn-sm" onclick="downloadDebrief('preround')">⬇️ Download Briefing</button>
           <button class="btn btn-outline btn-sm" onclick="printDebrief('preround')">🖨️ Print Briefing</button>
+        </div>
+      </div>
+
+      <!-- RANGE MODE -->
+      <div class="ai-mode-panel" id="aiPanel-range" style="display:none">
+        <div class="card" style="border-color:rgba(111,207,151,0.25)">
+          <div class="card-title" style="color:#6fcf97">🏌️ Range Practice Plan</div>
+          <p style="font-size:0.85rem;color:var(--cream-muted);margin-bottom:1.25rem">Your caddie will analyse your game gaps and build a targeted practice session with specific drills, timing, and success goals.</p>
+
+          <!-- Session type -->
+          <div style="margin-bottom:1.1rem">
+            <label style="font-size:0.75rem;font-weight:600;color:var(--cream-muted);text-transform:uppercase;letter-spacing:0.06em;display:block;margin-bottom:0.5rem">Session Type</label>
+            <div style="display:flex;gap:0.4rem;flex-wrap:wrap" id="rangeSessionPills">
+              <div class="cond-pill" data-val="general" onclick="toggleRangePill(this,'rangeSessionPills','single')">🎯 General Practice</div>
+              <div class="cond-pill" data-val="preround" onclick="toggleRangePill(this,'rangeSessionPills','single')">⛳ Pre-Round Warmup</div>
+              <div class="cond-pill" data-val="fix" onclick="toggleRangePill(this,'rangeSessionPills','single')">🔧 Fix a Problem</div>
+              <div class="cond-pill" data-val="scoring" onclick="toggleRangePill(this,'rangeSessionPills','single')">📉 Lower My Score</div>
+            </div>
+          </div>
+
+          <!-- Time available -->
+          <div style="margin-bottom:1.1rem">
+            <label style="font-size:0.75rem;font-weight:600;color:var(--cream-muted);text-transform:uppercase;letter-spacing:0.06em;display:block;margin-bottom:0.5rem">Time Available</label>
+            <div style="display:flex;gap:0.4rem;flex-wrap:wrap" id="rangeTimePills">
+              <div class="cond-pill" data-val="20 minutes" onclick="toggleRangePill(this,'rangeTimePills','single')">⚡ 20 min</div>
+              <div class="cond-pill" data-val="45 minutes" onclick="toggleRangePill(this,'rangeTimePills','single')">🕐 45 min</div>
+              <div class="cond-pill" data-val="90 minutes" onclick="toggleRangePill(this,'rangeTimePills','single')">🕙 90 min</div>
+              <div class="cond-pill" data-val="as long as needed" onclick="toggleRangePill(this,'rangeTimePills','single')">🏌️ Full Session</div>
+            </div>
+          </div>
+
+          <!-- Focus areas -->
+          <div style="margin-bottom:1.1rem">
+            <label style="font-size:0.75rem;font-weight:600;color:var(--cream-muted);text-transform:uppercase;letter-spacing:0.06em;display:block;margin-bottom:0.5rem">Focus Areas <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--cream-muted)">(pick all that apply)</span></label>
+            <div style="display:flex;gap:0.4rem;flex-wrap:wrap" id="rangeFocusPills">
+              <div class="cond-pill" data-val="Driver / Tee Shots" onclick="toggleRangePill(this,'rangeFocusPills','multi')">🏌️ Driver</div>
+              <div class="cond-pill" data-val="Fairway Woods & Hybrids" onclick="toggleRangePill(this,'rangeFocusPills','multi')">🌲 Woods / Hybrids</div>
+              <div class="cond-pill" data-val="Mid & Long Irons" onclick="toggleRangePill(this,'rangeFocusPills','multi')">⛳ Long Irons</div>
+              <div class="cond-pill" data-val="Short Irons & Wedges" onclick="toggleRangePill(this,'rangeFocusPills','multi')">🎯 Wedges</div>
+              <div class="cond-pill" data-val="Chipping & Pitching" onclick="toggleRangePill(this,'rangeFocusPills','multi')">🌀 Chipping</div>
+              <div class="cond-pill" data-val="Bunker Play" onclick="toggleRangePill(this,'rangeFocusPills','multi')">⚠️ Bunker</div>
+              <div class="cond-pill" data-val="Putting" onclick="toggleRangePill(this,'rangeFocusPills','multi')">🟣 Putting</div>
+              <div class="cond-pill" data-val="Course Management & Mental Game" onclick="toggleRangePill(this,'rangeFocusPills','multi')">🧠 Mental Game</div>
+            </div>
+          </div>
+
+          <!-- Facility -->
+          <div style="margin-bottom:1.1rem">
+            <label style="font-size:0.75rem;font-weight:600;color:var(--cream-muted);text-transform:uppercase;letter-spacing:0.06em;display:block;margin-bottom:0.5rem">What's Available?</label>
+            <div style="display:flex;gap:0.4rem;flex-wrap:wrap" id="rangeFacilityPills">
+              <div class="cond-pill selected" data-val="driving range" onclick="toggleRangePill(this,'rangeFacilityPills','multi')">🎯 Driving Range</div>
+              <div class="cond-pill" data-val="putting green" onclick="toggleRangePill(this,'rangeFacilityPills','multi')">🟣 Putting Green</div>
+              <div class="cond-pill" data-val="chipping green" onclick="toggleRangePill(this,'rangeFacilityPills','multi')">🌀 Chipping Green</div>
+              <div class="cond-pill" data-val="bunker practice area" onclick="toggleRangePill(this,'rangeFacilityPills','multi')">⚠️ Bunker</div>
+            </div>
+          </div>
+
+          <!-- Anything specific -->
+          <div class="form-group" style="margin-bottom:1.25rem">
+            <label>Anything specific to work on?</label>
+            <input type="text" id="rangeExtras" placeholder="e.g. shanking my irons, losing distance off the tee, can't stop 3-putting…" />
+          </div>
+
+          <button class="btn btn-ai" style="width:100%;justify-content:center;background:linear-gradient(135deg,#1B3A2D,#2d5a40);border-color:#6fcf97;color:#6fcf97" onclick="runRangePlan()">🏌️ Build My Practice Plan</button>
+        </div>
+        <div id="aiRangeOutput" style="display:none"></div>
+        <div id="aiRangeActions" style="display:none;gap:0.75rem;flex-wrap:wrap;justify-content:flex-end;margin-top:0.5rem">
+          <button class="btn btn-outline btn-sm" onclick="downloadDebrief('range')">⬇️ Download Plan</button>
+          <button class="btn btn-outline btn-sm" onclick="printDebrief('range')">🖨️ Print Plan</button>
         </div>
       </div>
 
@@ -2858,6 +2928,119 @@ async function renderNational() {
     r => r.show_real_name && r.display_name ? r.display_name : r.anonymous_id, 'bar-fill-score', '');
 }
 
+
+// ─────────────────────────────────────
+//  RANGE PRACTICE PLAN
+// ─────────────────────────────────────
+const _rangePills = {}; // groupId → value(s)
+
+function toggleRangePill(pill, groupId, mode) {
+  const val = pill.dataset.val;
+  if (mode === 'single') {
+    document.querySelectorAll(`#${groupId} .cond-pill`).forEach(p => p.classList.remove('selected'));
+    const wasSelected = _rangePills[groupId] === val;
+    if (wasSelected) { delete _rangePills[groupId]; }
+    else { pill.classList.add('selected'); _rangePills[groupId] = val; }
+  } else {
+    pill.classList.toggle('selected');
+    if (!Array.isArray(_rangePills[groupId])) _rangePills[groupId] = [];
+    const arr = _rangePills[groupId];
+    const idx = arr.indexOf(val);
+    if (idx === -1) arr.push(val); else arr.splice(idx, 1);
+  }
+}
+
+function buildGapAnalysis() {
+  const name = _currentProfile?.display_name || '';
+  const myRounds = _rounds.filter(r => r.golfer === name && r.score > 0).slice(0, 20);
+  if (!myRounds.length) return null;
+
+  const totalRounds = myRounds.length;
+  const avgScore = myRounds.reduce((s,r) => s+r.score, 0) / totalRounds;
+  const puttRounds = myRounds.filter(r=>r.total_putts>0);
+  const avgPutts = puttRounds.length ? puttRounds.reduce((s,r)=>s+r.total_putts,0)/puttRounds.length : null;
+
+  const par3=[],par4=[],par5=[];
+  let girCount=0,girTotal=0,hazCount=0,hazTotal=0;
+  myRounds.forEach(r => {
+    try {
+      const holes = JSON.parse(r.holes||'[]');
+      holes.forEach(h => {
+        if (!h.score||h.scratched) return;
+        const diff = h.score - h.par;
+        if (h.par===3) par3.push(diff);
+        else if (h.par===4) par4.push(diff);
+        else if (h.par===5) par5.push(diff);
+        girTotal++; if (h.gir) girCount++;
+        hazTotal++; if (h.hazard) hazCount++;
+      });
+    } catch(e) {}
+  });
+  const avg = arr => arr.length ? (arr.reduce((a,b)=>a+b,0)/arr.length).toFixed(2) : null;
+  const girPct  = girTotal  > 0 ? Math.round((girCount/girTotal)*100)  : null;
+  const hazPct  = hazTotal  > 0 ? Math.round((hazCount/hazTotal)*100)  : null;
+
+  const gaps = [];
+  if (avgPutts && avgPutts > 32) gaps.push(`Averaging ${avgPutts.toFixed(1)} putts/round (tour avg ~30) — putting is costing shots.`);
+  if (girPct !== null && girPct < 40) gaps.push(`GIR rate is only ${girPct}% — approach accuracy is a key gap.`);
+  if (hazPct !== null && hazPct > 20) gaps.push(`Hitting hazards on ${hazPct}% of holes — accuracy and course management need work.`);
+  if (avg(par3) && parseFloat(avg(par3)) > 1.2) gaps.push(`Averaging +${avg(par3)} on par 3s — iron play or club selection costing shots.`);
+  if (avg(par5) && parseFloat(avg(par5)) > 1.0) gaps.push(`Averaging +${avg(par5)} on par 5s — scoring opportunities being left on the table.`);
+
+  return { avgScore:avgScore.toFixed(1), avgPutts:avgPutts?.toFixed(1)||'unknown', girPct:girPct!==null?`${girPct}%`:'unknown', hazPct:hazPct!==null?`${hazPct}%`:'unknown', par3avg:avg(par3)||'unknown', par4avg:avg(par4)||'unknown', par5avg:avg(par5)||'unknown', gaps, rounds:totalRounds };
+}
+
+async function runRangePlan() {
+  const sessionType = _rangePills['rangeSessionPills'] || 'general practice';
+  const timeAvail   = _rangePills['rangeTimePills']    || '45 minutes';
+  const focusAreas  = Array.isArray(_rangePills['rangeFocusPills'])    ? _rangePills['rangeFocusPills']    : [];
+  const facilities  = Array.isArray(_rangePills['rangeFacilityPills']) ? _rangePills['rangeFacilityPills'] : ['driving range'];
+  const extras      = document.getElementById('rangeExtras')?.value?.trim() || '';
+
+  const gaps = buildGapAnalysis();
+  const gapText = gaps ? `GAP ANALYSIS (last ${gaps.rounds} rounds):
+- Avg Score: ${gaps.avgScore} | Avg Putts: ${gaps.avgPutts}/round
+- GIR Rate: ${gaps.girPct} | Hazard Rate: ${gaps.hazPct}
+- Avg vs par: Par 3s ${gaps.par3avg} · Par 4s ${gaps.par4avg} · Par 5s ${gaps.par5avg}
+${gaps.gaps.length ? 'Key gaps:\n'+gaps.gaps.map(g=>'- '+g).join('\n') : '- No major gaps from data yet'}`
+    : 'No round data available — build the plan based on stated focus areas and player profile.';
+
+  const prompt = `Build me a specific, structured practice plan for today's session.
+
+SESSION DETAILS:
+- Type: ${sessionType}
+- Time available: ${timeAvail}
+- Focus areas: ${focusAreas.length ? focusAreas.join(', ') : 'general'}
+- Available facilities: ${facilities.join(', ')}
+${extras ? `- Specific issue to fix: ${extras}` : ''}
+
+${gapText}
+
+Structure the plan exactly like this:
+
+### 🔍 Your Biggest Gaps Right Now
+(2–3 sentences on where the data says shots are being lost — be specific with numbers. If no data, base it on the player profile.)
+
+### 📋 Session Schedule
+(A timed breakdown for the full ${timeAvail}. Each block: time, what to work on, why. Make it feel like a real structured lesson.)
+
+### 🎯 Key Drills
+(3–5 specific named drills matched to the gaps and focus areas. For each: name, purpose, exact setup, what to do, reps/balls, and measurable success target. Only include drills possible with available facilities: ${facilities.join(', ')}.)
+
+### 🧠 One Thought to Take to the Course
+(A single, simple swing thought or mental key that ties this practice session to actual on-course performance.)
+
+### 📅 Next Session Focus
+(One sentence on what to prioritise next time based on today's work.)
+
+Be extremely specific. Reference their actual stats. Name the drills. Give exact rep counts and targets. Write this like a PGA teaching pro who has studied their game data.`;
+
+  const outputEl  = document.getElementById('aiRangeOutput');
+  const actionsEl = document.getElementById('aiRangeActions');
+  if (actionsEl) actionsEl.style.display = 'none';
+  const text = await callCaddieStreaming([{ role:'user', content: prompt }], outputEl);
+  if (text && actionsEl) actionsEl.style.display = 'flex';
+}
 
 // ─────────────────────────────────────
 //  CART GIRL
@@ -5320,7 +5503,18 @@ Be hyper-specific to my actual stats, typical miss, and bag distances. Factor in
   if (text && actionsEl) actionsEl.style.display = 'flex';
 }
 
+function getAiOutputText(mode) {
+  if (mode === 'range')   return document.getElementById('aiRangeOutput')?.innerHTML || '';
+  if (mode === 'debrief') return document.getElementById('aiDebriefOutput')?.innerHTML || '';
+  return document.getElementById('aiPreRoundOutput')?.innerHTML || '';
+}
+
 function getAiOutputTitle(mode) {
+  if (mode === 'range') {
+    const focus = Array.isArray(_rangePills['rangeFocusPills']) && _rangePills['rangeFocusPills'].length
+      ? _rangePills['rangeFocusPills'][0] : 'Practice';
+    return 'Range Practice Plan — ' + focus;
+  }
   if (mode === 'debrief') {
     const picker = document.getElementById('aiDebriefRoundPicker');
     const sel = picker?.options[picker.selectedIndex]?.text || 'Round';
