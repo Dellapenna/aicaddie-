@@ -778,6 +778,7 @@ nav { padding: 0.8rem 1rem !important; }
       <button class="more-item" onclick="showPage('stats',null);toggleMoreMenu()"><span>📊</span> Stats</button>
       <button class="more-item" onclick="showPage('golfers',null);toggleMoreMenu()"><span>👤</span> Golfers</button>
       <button class="more-item" onclick="showPage('groups',null);toggleMoreMenu()"><span>👥</span> Groups</button>
+      <button class="more-item" onclick="showPage('cartgirl',null);toggleMoreMenu()"><span>🍺</span> Cart Girl</button>
       <button class="more-item" onclick="launchGame('https://wolfcaddie.netlify.app/');toggleMoreMenu()"><span>🎮</span> Games</button>
       <button class="more-item" id="moreAdminBtn" style="display:none" onclick="showPage('admin',null);toggleMoreMenu()"><span>🔑</span> Admin</button>
     </div>
@@ -1031,7 +1032,7 @@ nav { padding: 0.8rem 1rem !important; }
 
   <!-- HISTORY -->
   <div id="page-history" class="page">
-    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;margin-bottom:1.25rem">
       <div class="page-header" style="margin:0">Round History</div>
       <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
         <button class="btn btn-outline btn-sm" onclick="exportCSV()">⬇️ Export CSV</button>
@@ -1039,12 +1040,59 @@ nav { padding: 0.8rem 1rem !important; }
         <button class="btn btn-danger btn-sm" onclick="clearAllData()">🗑 Clear All</button>
       </div>
     </div>
-    <div class="filter-bar">
-      <label>Filter:</label>
-      <select id="historyFilter" onchange="renderHistory()"><option value="">All Golfers</option></select>
-      <button class="btn btn-outline btn-sm" onclick="shareGolferProfile()" id="shareProfileBtn" style="display:none">🔗 Share Profile</button>
+
+    <!-- Filter bar -->
+    <div style="background:var(--card-bg);border:1px solid var(--border);border-radius:10px;padding:0.85rem 1rem;margin-bottom:1.25rem">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.6rem;cursor:pointer" onclick="toggleHistoryFilters()">
+        <span style="font-size:0.78rem;font-weight:600;color:var(--cream-muted);text-transform:uppercase;letter-spacing:0.06em">🔍 Filters <span id="historyFilterBadge" style="display:none;background:var(--gold);color:var(--green-deep);border-radius:10px;padding:0.1rem 0.45rem;font-size:0.7rem;font-weight:700;margin-left:0.4rem"></span></span>
+        <span id="historyFilterChevron" style="color:var(--cream-muted);font-size:0.8rem;transition:transform 0.2s">▼</span>
+      </div>
+      <div id="historyFilterBody" style="display:none">
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:0.75rem;margin-bottom:0.75rem">
+          <div class="form-group" style="margin:0">
+            <label>Golfer</label>
+            <select id="historyFilter" onchange="renderHistory()" style="font-size:0.85rem"><option value="">All Golfers</option></select>
+          </div>
+          <div class="form-group" style="margin:0">
+            <label>Course</label>
+            <input type="text" id="historyCourseFilter" placeholder="e.g. Pebble Beach" oninput="renderHistory()" style="font-size:0.85rem" />
+          </div>
+          <div class="form-group" style="margin:0">
+            <label>From</label>
+            <input type="date" id="historyDateFrom" onchange="renderHistory()" style="font-size:0.85rem" />
+          </div>
+          <div class="form-group" style="margin:0">
+            <label>To</label>
+            <input type="date" id="historyDateTo" onchange="renderHistory()" style="font-size:0.85rem" />
+          </div>
+          <div class="form-group" style="margin:0">
+            <label>Result</label>
+            <select id="historyScoreFilter" onchange="renderHistory()" style="font-size:0.85rem">
+              <option value="">Any</option>
+              <option value="under">Under par</option>
+              <option value="even">Even par</option>
+              <option value="over">Over par</option>
+              <option value="best">Personal bests only</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin:0">
+            <label>Holes</label>
+            <select id="historyHolesFilter" onchange="renderHistory()" style="font-size:0.85rem">
+              <option value="">Any</option>
+              <option value="18">18 holes</option>
+              <option value="9">9 holes</option>
+            </select>
+          </div>
+        </div>
+        <div style="display:flex;justify-content:flex-end">
+          <button class="btn btn-outline btn-sm" onclick="clearHistoryFilters()">Clear Filters</button>
+        </div>
+      </div>
     </div>
+
+    <div id="historyResultCount" style="font-size:0.78rem;color:var(--cream-muted);margin-bottom:0.75rem;display:none"></div>
     <div id="historyList" class="rounds-list"></div>
+    <button class="btn btn-outline btn-sm" id="historyLoadMore" style="display:none;width:100%;justify-content:center;margin-top:1rem" onclick="historyShowMore()">Load more rounds</button>
   </div>
 
   <!-- STATS -->
@@ -1623,6 +1671,67 @@ nav { padding: 0.8rem 1rem !important; }
   </div>
 
 
+  <!-- CART GIRL -->
+  <div id="page-cartgirl" class="page">
+    <div class="page-header">🍺 Cart Girl Sightings</div>
+    <p style="font-size:0.85rem;color:var(--cream-muted);margin-bottom:1.5rem">Spotted an exceptional cart girl? Log it for the crew. Community submissions only — keep it classy.</p>
+
+    <!-- Submission form -->
+    <div class="card" style="margin-bottom:1.5rem">
+      <div class="card-title">📍 Submit a Sighting</div>
+
+      <div class="form-group" style="margin-bottom:0.75rem">
+        <label>Course</label>
+        <div class="course-search-wrap">
+          <input type="text" id="cgCourseSearch" placeholder="Search for a course…" autocomplete="off" oninput="onCgCourseInput()" onfocus="onCgCourseInput()" />
+          <div class="course-dropdown" id="cgCourseDropdown" style="display:none"></div>
+        </div>
+        <div class="course-search-status" id="cgCourseStatus"></div>
+        <input type="hidden" id="cgCourseName" />
+      </div>
+
+      <div class="form-group" style="margin-bottom:0.75rem">
+        <label>Photo <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--cream-muted)">(required)</span></label>
+        <div class="photo-drop" id="cgPhotoDrop">
+          <input type="file" id="cgPhotoInput" accept="image/*" onchange="onCgPhotoSelected(event)" />
+          <div class="drop-label">📷 <strong>Tap to add photo</strong></div>
+        </div>
+        <div class="photo-preview" id="cgPhotoPreview" style="display:none">
+          <img id="cgPhotoThumb" src="" alt="Preview" />
+          <button class="remove-photo" onclick="removeCgPhoto()">✕</button>
+        </div>
+      </div>
+
+      <div class="form-group" style="margin-bottom:1rem">
+        <label>Caption <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--cream-muted)">(optional)</span></label>
+        <input type="text" id="cgCaption" placeholder="e.g. Cold Bud Lights on hole 9 at Augusta 🍺" maxlength="120" />
+      </div>
+
+      <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1rem">
+        <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;font-size:0.85rem;color:var(--cream-muted);text-transform:none;letter-spacing:0;font-weight:400">
+          <input type="checkbox" id="cgAnon" style="width:auto;padding:0" />
+          Post anonymously
+        </label>
+      </div>
+
+      <button class="btn btn-gold" onclick="submitCartGirl()" id="cgSubmitBtn" style="width:100%;justify-content:center">🍺 Submit Sighting</button>
+    </div>
+
+    <!-- Community wall -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:0.5rem">
+      <div style="font-family:'Playfair Display',serif;font-size:1.1rem;color:var(--gold)">🏆 Community Sightings</div>
+      <select id="cgSortFilter" onchange="loadCartGirlSightings()" style="font-size:0.82rem;padding:0.35rem 0.6rem;max-width:160px">
+        <option value="newest">Newest First</option>
+        <option value="top">Top Rated</option>
+        <option value="course">By Course</option>
+      </select>
+    </div>
+    <div id="cgWall" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1rem"></div>
+    <div id="cgLoadMoreWrap" style="display:none;margin-top:1rem;text-align:center">
+      <button class="btn btn-outline btn-sm" onclick="loadCartGirlSightings(true)">Load more</button>
+    </div>
+  </div>
+
   <!-- ADMIN DASHBOARD -->
   <div id="page-admin" class="page">
     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem">
@@ -2132,6 +2241,7 @@ function initApp() {
     if (!e.target.closest('.course-search-wrap')) {
       closeDropdown();
       document.getElementById('preRoundCourseDropdown').style.display = 'none';
+      document.getElementById('cgCourseDropdown').style.display = 'none';
     }
   });
   // Photo drag-drop
@@ -2685,6 +2795,190 @@ async function renderNational() {
 }
 
 
+// ─────────────────────────────────────
+//  CART GIRL
+// ─────────────────────────────────────
+let _cgCourse = null;
+let _cgPhoto  = null;
+let _cgOffset = 0;
+const CG_PAGE_SIZE = 12;
+
+// Course search
+let _cgSearchTimeout = null;
+function onCgCourseInput() {
+  const q = document.getElementById('cgCourseSearch').value.trim();
+  clearTimeout(_cgSearchTimeout);
+  const dd = document.getElementById('cgCourseDropdown');
+  const st = document.getElementById('cgCourseStatus');
+  if (q.length < 3) { dd.style.display = 'none'; st.textContent = ''; return; }
+  st.className = 'course-search-status loading';
+  st.innerHTML = '<span class="spinner"></span> Searching…';
+  _cgSearchTimeout = setTimeout(async () => {
+    const cache = getCourseCache();
+    const key = 'search:' + q.toLowerCase();
+    let courses = cache[key];
+    if (!courses) {
+      try {
+        const r = await fetch(`${GOLF_API_BASE}/search?search_query=${encodeURIComponent(q)}`, { headers: { 'Authorization': 'Key ' + GOLF_API_KEY } });
+        courses = (await r.json()).courses || [];
+        cache[key] = courses; saveCourseCache(cache);
+      } catch(e) { st.className = 'course-search-status error'; st.textContent = 'Search failed'; return; }
+    }
+    st.className = 'course-search-status'; st.textContent = '';
+    if (!courses.length) { dd.style.display = 'none'; return; }
+    dd.style.display = 'block';
+    dd.innerHTML = courses.slice(0, 8).map(c => {
+      const name = c.club_name || c.course_name || 'Unknown';
+      const loc  = [c.city, c.state_name || c.country].filter(Boolean).join(', ');
+      return `<div class="course-option" onclick="selectCgCourse('${esc(name)}','${esc(loc)}')">
+        <div class="co-name">${esc(name)}</div>
+        <div class="co-meta">${esc(loc)}</div>
+      </div>`;
+    }).join('');
+  }, 400);
+}
+
+function selectCgCourse(name, loc) {
+  _cgCourse = name;
+  document.getElementById('cgCourseSearch').value = name;
+  document.getElementById('cgCourseName').value   = name;
+  document.getElementById('cgCourseDropdown').style.display = 'none';
+  document.getElementById('cgCourseStatus').textContent = `✓ ${loc}`;
+  document.getElementById('cgCourseStatus').className = 'course-search-status success';
+}
+
+// Photo
+function onCgPhotoSelected(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  _cgPhoto = file;
+  const reader = new FileReader();
+  reader.onload = e => {
+    document.getElementById('cgPhotoThumb').src = e.target.result;
+    document.getElementById('cgPhotoPreview').style.display = 'inline-block';
+    document.getElementById('cgPhotoDrop').style.display = 'none';
+  };
+  reader.readAsDataURL(file);
+}
+function removeCgPhoto() {
+  _cgPhoto = null;
+  document.getElementById('cgPhotoPreview').style.display = 'none';
+  document.getElementById('cgPhotoDrop').style.display = 'block';
+  document.getElementById('cgPhotoInput').value = '';
+}
+
+// Submit
+async function submitCartGirl() {
+  const course  = document.getElementById('cgCourseName').value.trim() || document.getElementById('cgCourseSearch').value.trim();
+  const caption = document.getElementById('cgCaption').value.trim();
+  const anon    = document.getElementById('cgAnon').checked;
+
+  if (!course)   { showToast('Please select a course'); return; }
+  if (!_cgPhoto) { showToast('Please add a photo'); return; }
+
+  const btn = document.getElementById('cgSubmitBtn');
+  btn.disabled = true; btn.textContent = '⏳ Uploading…';
+
+  try {
+    // Upload photo to Supabase storage
+    const ext = _cgPhoto.name.split('.').pop();
+    const path = `cartgirl/${_currentUser.id}_${Date.now()}.${ext}`;
+    const { data: uploadData, error: upErr } = await _supabase.storage.from('round-photos').upload(path, _cgPhoto, { upsert: true });
+    if (upErr) throw upErr;
+    const { data: { publicUrl } } = _supabase.storage.from('round-photos').getPublicUrl(path);
+
+    // Insert row
+    const poster = anon ? 'Anonymous' : (_currentProfile?.display_name || 'Anonymous');
+    const { error } = await _supabase.from('cart_girl_sightings').insert({
+      user_id:    _currentUser.id,
+      course:     course,
+      photo_url:  publicUrl,
+      caption:    caption || null,
+      poster:     poster,
+      likes:      0,
+    });
+    if (error) throw error;
+
+    showToast('🍺 Sighting submitted!');
+    // Reset form
+    document.getElementById('cgCourseSearch').value = '';
+    document.getElementById('cgCourseName').value   = '';
+    document.getElementById('cgCaption').value      = '';
+    document.getElementById('cgAnon').checked       = false;
+    document.getElementById('cgCourseStatus').textContent = '';
+    _cgCourse = null; _cgPhoto = null;
+    removeCgPhoto();
+    _cgOffset = 0;
+    loadCartGirlSightings();
+  } catch(e) {
+    showToast('❌ Could not submit — ' + (e.message || 'unknown error'));
+    console.error(e);
+  } finally {
+    btn.disabled = false; btn.textContent = '🍺 Submit Sighting';
+  }
+}
+
+// Load wall
+async function loadCartGirlSightings(append = false) {
+  const sortBy = document.getElementById('cgSortFilter')?.value || 'newest';
+  if (!append) _cgOffset = 0;
+  const el = document.getElementById('cgWall');
+  if (!append) el.innerHTML = '<p style="color:var(--cream-muted);font-size:0.85rem">Loading…</p>';
+
+  let query = _supabase.from('cart_girl_sightings').select('*').range(_cgOffset, _cgOffset + CG_PAGE_SIZE - 1);
+  if (sortBy === 'newest') query = query.order('created_at', { ascending: false });
+  if (sortBy === 'top')    query = query.order('likes', { ascending: false });
+  if (sortBy === 'course') query = query.order('course', { ascending: true });
+
+  const { data, error } = await query;
+  if (error) { el.innerHTML = '<p style="color:#f87171;font-size:0.85rem">Could not load sightings.</p>'; return; }
+
+  if (!append) el.innerHTML = '';
+
+  if (!data?.length && !append) {
+    el.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="icon">🍺</div><p>No sightings yet — be the first!</p></div>`;
+    document.getElementById('cgLoadMoreWrap').style.display = 'none';
+    return;
+  }
+
+  data.forEach(s => {
+    const card = document.createElement('div');
+    card.style.cssText = 'background:var(--card-bg);border:1px solid var(--border);border-radius:12px;overflow:hidden;';
+    const dateStr = s.created_at ? new Date(s.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '';
+    const isMe = s.user_id === _currentUser?.id;
+    card.innerHTML = `
+      <img src="${esc(s.photo_url)}" alt="Cart girl sighting" style="width:100%;aspect-ratio:4/3;object-fit:cover;cursor:pointer;display:block" onclick="openLightbox('${esc(s.photo_url)}')" />
+      <div style="padding:0.85rem">
+        <div style="font-weight:700;font-size:0.9rem;margin-bottom:0.15rem">⛳ ${esc(s.course)}</div>
+        ${s.caption ? `<div style="font-size:0.82rem;color:var(--cream-muted);margin-bottom:0.5rem">${esc(s.caption)}</div>` : ''}
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:0.5rem">
+          <div style="font-size:0.72rem;color:var(--cream-muted)">${esc(s.poster)} · ${dateStr}</div>
+          <div style="display:flex;align-items:center;gap:0.4rem">
+            <button onclick="cgLike('${s.id}',this)" style="background:none;border:none;cursor:pointer;font-size:0.9rem;color:var(--amber);padding:0.2rem 0.4rem;border-radius:6px;border:1px solid var(--border)" title="Like">🍺 ${s.likes||0}</button>
+            ${isMe ? `<button onclick="cgDelete('${s.id}')" style="background:none;border:none;cursor:pointer;font-size:0.75rem;color:#f87171;padding:0.2rem 0.4rem;border-radius:6px;border:1px solid rgba(248,113,113,0.3)">✕</button>` : ''}
+          </div>
+        </div>
+      </div>`;
+    el.appendChild(card);
+  });
+
+  _cgOffset += data.length;
+  document.getElementById('cgLoadMoreWrap').style.display = data.length === CG_PAGE_SIZE ? 'block' : 'none';
+}
+
+async function cgLike(id, btn) {
+  const current = parseInt(btn.textContent.replace('🍺','').trim()) || 0;
+  await _supabase.from('cart_girl_sightings').update({ likes: current + 1 }).eq('id', id);
+  btn.textContent = `🍺 ${current + 1}`;
+}
+
+async function cgDelete(id) {
+  if (!confirm('Delete this sighting?')) return;
+  await _supabase.from('cart_girl_sightings').delete().eq('id', id);
+  _cgOffset = 0;
+  loadCartGirlSightings();
+}
+
 // CONFIG moved to top of script
 
 // ─────────────────────────────────────
@@ -2833,6 +3127,7 @@ function showPage(name,btn){
   if(name==='groups')renderGroupsPage();
   if(name==='profile')renderProfilePage();
   if(name==='admin')loadAdminData();
+  if(name==='cartgirl')loadCartGirlSightings();
   if(name==='ai'){ switchAiMode('debrief'); }
   if(name==='new-round'){ lsCheckResume(); }
   if(name!=='new-round') stopQrScan();
@@ -3633,29 +3928,120 @@ function renderGolferRoster(){
 // ─────────────────────────────────────
 //  HISTORY
 // ─────────────────────────────────────
-function renderHistory(){
-  const filter=document.getElementById('historyFilter').value;
-  let rounds=filter?_rounds.filter(r=>r.golfer===filter):_rounds;
-  const el=document.getElementById('historyList');
-  if(!rounds.length){el.innerHTML=`<div class="empty-state"><div class="icon">⛳</div><p>No rounds found.</p></div>`;return;}
+// ─────────────────────────────────────
+//  HISTORY FILTERS
+// ─────────────────────────────────────
+let _historyLimit = 30;
 
-  // Group rounds by group_id, singletons by their own id
-  const groups={}, singles=[];
-  rounds.forEach(r=>{
-    if(r.group_id){ if(!groups[r.group_id])groups[r.group_id]=[];groups[r.group_id].push(r); }
+function toggleHistoryFilters() {
+  const body    = document.getElementById('historyFilterBody');
+  const chevron = document.getElementById('historyFilterChevron');
+  const open    = body.style.display !== 'none';
+  body.style.display    = open ? 'none' : 'block';
+  chevron.style.transform = open ? '' : 'rotate(180deg)';
+}
+
+function clearHistoryFilters() {
+  document.getElementById('historyFilter').value      = '';
+  document.getElementById('historyCourseFilter').value = '';
+  document.getElementById('historyDateFrom').value    = '';
+  document.getElementById('historyDateTo').value      = '';
+  document.getElementById('historyScoreFilter').value = '';
+  document.getElementById('historyHolesFilter').value = '';
+  _historyLimit = 30;
+  updateHistoryFilterBadge();
+  renderHistory();
+}
+
+function updateHistoryFilterBadge() {
+  const active = [
+    document.getElementById('historyFilter')?.value,
+    document.getElementById('historyCourseFilter')?.value,
+    document.getElementById('historyDateFrom')?.value,
+    document.getElementById('historyDateTo')?.value,
+    document.getElementById('historyScoreFilter')?.value,
+    document.getElementById('historyHolesFilter')?.value,
+  ].filter(Boolean).length;
+  const badge = document.getElementById('historyFilterBadge');
+  if (badge) { badge.textContent = active; badge.style.display = active ? 'inline' : 'none'; }
+}
+
+function historyShowMore() {
+  _historyLimit += 30;
+  renderHistory();
+}
+
+function renderHistory(){
+  updateHistoryFilterBadge();
+  const golfer      = document.getElementById('historyFilter')?.value || '';
+  const courseQ     = (document.getElementById('historyCourseFilter')?.value || '').toLowerCase().trim();
+  const dateFrom    = document.getElementById('historyDateFrom')?.value || '';
+  const dateTo      = document.getElementById('historyDateTo')?.value || '';
+  const scoreFilter = document.getElementById('historyScoreFilter')?.value || '';
+  const holesFilter = document.getElementById('historyHolesFilter')?.value || '';
+
+  // Share profile button
+  const shareBtn = document.getElementById('shareProfileBtn');
+  if (shareBtn) shareBtn.style.display = golfer ? 'inline-flex' : 'none';
+
+  let rounds = [..._rounds];
+
+  // Personal best threshold (lowest score per golfer)
+  const bestScores = {};
+  if (scoreFilter === 'best') {
+    rounds.forEach(r => {
+      if (r.score > 0) bestScores[r.golfer] = Math.min(bestScores[r.golfer] ?? Infinity, r.score);
+    });
+  }
+
+  // Apply filters
+  rounds = rounds.filter(r => {
+    if (golfer      && r.golfer !== golfer) return false;
+    if (courseQ     && !r.course?.toLowerCase().includes(courseQ)) return false;
+    if (dateFrom    && r.date < dateFrom) return false;
+    if (dateTo      && r.date > dateTo)   return false;
+    if (holesFilter && String(r.holes_played) !== holesFilter && String(r.holes_played) !== (holesFilter === '18' ? '18' : '9')) return false;
+    if (scoreFilter === 'under'  && (r.score_to_par ?? 1) >= 0) return false;
+    if (scoreFilter === 'even'   && (r.score_to_par ?? 1) !== 0) return false;
+    if (scoreFilter === 'over'   && (r.score_to_par ?? -1) <= 0) return false;
+    if (scoreFilter === 'best'   && r.score !== bestScores[r.golfer]) return false;
+    return true;
+  });
+
+  const el = document.getElementById('historyList');
+  const countEl = document.getElementById('historyResultCount');
+  const loadMoreBtn = document.getElementById('historyLoadMore');
+
+  if (!rounds.length) {
+    el.innerHTML = `<div class="empty-state"><div class="icon">⛳</div><p>No rounds match your filters.</p></div>`;
+    if (countEl) countEl.style.display = 'none';
+    if (loadMoreBtn) loadMoreBtn.style.display = 'none';
+    return;
+  }
+
+  if (countEl) {
+    countEl.textContent = `${rounds.length} round${rounds.length !== 1 ? 's' : ''} found`;
+    countEl.style.display = 'block';
+  }
+
+  // Group by group_id
+  const groups = {}, singles = [];
+  rounds.forEach(r => {
+    if (r.group_id) { if (!groups[r.group_id]) groups[r.group_id] = []; groups[r.group_id].push(r); }
     else singles.push(r);
   });
 
-  // Sort all by date desc (use first round in group for date)
-  const items=[
-    ...singles.map(r=>({type:'single',r,date:r.date||''})),
-    ...Object.values(groups).map(g=>({type:'group',rounds:g,date:g[0]?.date||''}))
-  ].sort((a,b)=>(b.date>a.date?1:-1));
+  const items = [
+    ...singles.map(r => ({type:'single', r, date:r.date||''})),
+    ...Object.values(groups).map(g => ({type:'group', rounds:g, date:g[0]?.date||''}))
+  ].sort((a,b) => b.date > a.date ? 1 : -1);
 
-  el.innerHTML=items.map(item=>{
-    if(item.type==='single') return renderSingleRound(item.r);
-    return renderGroupRound(item.rounds);
-  }).join('');
+  const visible = items.slice(0, _historyLimit);
+  el.innerHTML = visible.map(item =>
+    item.type === 'single' ? renderSingleRound(item.r) : renderGroupRound(item.rounds)
+  ).join('');
+
+  if (loadMoreBtn) loadMoreBtn.style.display = items.length > _historyLimit ? 'flex' : 'none';
 }
 
 function condIcons(r) {
