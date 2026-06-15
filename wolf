@@ -1,0 +1,981 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+<title>🐺 Wolf — Stakes Play</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,700;1,400&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --felt:#0a1f14;
+  --felt-mid:#0f2d1e;
+  --felt-light:#163d29;
+  --gold:#d4a843;
+  --gold-light:#f0c96a;
+  --gold-dim:#8a6b22;
+  --cream:#f5f0e6;
+  --cream-muted:#a89a7c;
+  --red:#c0392b;
+  --red-light:#e74c3c;
+  --green-win:#27ae60;
+  --blue:#2980b9;
+  --border:rgba(212,168,67,0.2);
+  --card:rgba(255,255,255,0.04);
+}
+body{font-family:'Inter',sans-serif;background:var(--felt);color:var(--cream);min-height:100vh;overflow-x:hidden;}
+
+/* ── SCREENS ── */
+.screen{display:none;min-height:100vh;}
+.screen.active{display:block;}
+
+/* ── SETUP SCREEN ── */
+#setup{background:radial-gradient(ellipse at 50% 0%,#1a3d25 0%,var(--felt) 70%);padding:2rem 1rem;}
+.wolf-logo{text-align:center;padding:2rem 0 1rem;}
+.wolf-logo .w-title{font-family:'Bebas Neue',sans-serif;font-size:5rem;letter-spacing:0.15em;color:var(--gold);line-height:1;text-shadow:0 0 40px rgba(212,168,67,0.4);}
+.wolf-logo .w-sub{font-family:'Playfair Display',serif;font-style:italic;font-size:1.1rem;color:var(--cream-muted);letter-spacing:0.05em;margin-top:0.25rem;}
+.wolf-logo .w-tagline{font-size:0.78rem;color:var(--gold-dim);text-transform:uppercase;letter-spacing:0.2em;margin-top:1rem;}
+
+.setup-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:1.5rem;max-width:560px;margin:0 auto 1.25rem;}
+.setup-section-title{font-family:'Bebas Neue',sans-serif;font-size:1.3rem;letter-spacing:0.1em;color:var(--gold);margin-bottom:1rem;}
+.field-label{font-size:0.72rem;font-weight:700;color:var(--cream-muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.4rem;display:block;}
+.field-input{width:100%;background:rgba(0,0,0,0.3);border:1px solid var(--border);color:var(--cream);padding:0.65rem 0.9rem;border-radius:8px;font-size:0.95rem;font-family:'Inter',sans-serif;transition:border-color 0.2s;}
+.field-input:focus{outline:none;border-color:var(--gold);}
+.field-input::placeholder{color:var(--cream-muted);}
+.field-row{display:flex;gap:0.75rem;flex-wrap:wrap;margin-bottom:0.9rem;}
+.field-group{flex:1;min-width:120px;display:flex;flex-direction:column;}
+
+.player-inputs{display:flex;flex-direction:column;gap:0.5rem;}
+.player-row{display:flex;align-items:center;gap:0.75rem;}
+.player-num{width:28px;height:28px;border-radius:50%;background:var(--gold);color:var(--felt);font-weight:800;font-size:0.82rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.player-num.p2{background:#3a9bd5;}
+.player-num.p3{background:#e74c3c;}
+.player-num.p4{background:#9b59b6;}
+.player-num.p5{background:#27ae60;}
+
+.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:0.75rem 0;border-bottom:1px solid var(--border);}
+.toggle-row:last-child{border-bottom:none;}
+.toggle-label{font-size:0.88rem;}
+.toggle-sub{font-size:0.72rem;color:var(--cream-muted);margin-top:0.15rem;}
+.toggle{position:relative;width:44px;height:24px;flex-shrink:0;}
+.toggle input{opacity:0;width:0;height:0;}
+.toggle-slider{position:absolute;inset:0;background:rgba(255,255,255,0.1);border-radius:24px;cursor:pointer;transition:0.3s;}
+.toggle-slider::before{content:'';position:absolute;width:18px;height:18px;left:3px;top:3px;background:#fff;border-radius:50%;transition:0.3s;}
+.toggle input:checked+.toggle-slider{background:var(--gold);}
+.toggle input:checked+.toggle-slider::before{transform:translateX(20px);}
+
+.btn-start{width:100%;max-width:560px;margin:0 auto;display:block;padding:1.1rem;background:linear-gradient(135deg,var(--gold),var(--gold-light));color:var(--felt);font-family:'Bebas Neue',sans-serif;font-size:1.6rem;letter-spacing:0.15em;border:none;border-radius:12px;cursor:pointer;transition:all 0.2s;margin-top:1rem;}
+.btn-start:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(212,168,67,0.4);}
+
+/* ── GAME SCREEN ── */
+#game{background:var(--felt);}
+
+.game-nav{display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem;background:rgba(0,0,0,0.3);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:50;}
+.game-nav .gn-title{font-family:'Bebas Neue',sans-serif;font-size:1.5rem;letter-spacing:0.1em;color:var(--gold);}
+.game-nav .gn-hole{font-size:0.82rem;color:var(--cream-muted);}
+.btn-sm-outline{background:none;border:1px solid var(--border);color:var(--cream-muted);padding:0.3rem 0.75rem;border-radius:6px;font-size:0.78rem;cursor:pointer;font-family:'Inter',sans-serif;transition:all 0.15s;}
+.btn-sm-outline:hover{border-color:var(--gold);color:var(--gold);}
+
+.standings-bar{display:flex;gap:0;overflow-x:auto;background:rgba(0,0,0,0.25);border-bottom:1px solid var(--border);}
+.standing-pill{display:flex;flex-direction:column;align-items:center;padding:0.6rem 0.9rem;flex:1;min-width:70px;border-right:1px solid var(--border);}
+.standing-pill:last-child{border-right:none;}
+.sp-name{font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--cream-muted);}
+.sp-amt{font-family:'Bebas Neue',sans-serif;font-size:1.2rem;letter-spacing:0.05em;}
+.sp-amt.pos{color:var(--green-win);}
+.sp-amt.neg{color:var(--red-light);}
+.sp-amt.zero{color:var(--cream-muted);}
+
+/* ── HOLE CARD ── */
+.hole-card{max-width:600px;margin:1.25rem auto;padding:0 1rem;}
+
+.hole-header{text-align:center;margin-bottom:1.5rem;position:relative;}
+.hole-badge{font-family:'Bebas Neue',sans-serif;font-size:0.9rem;letter-spacing:0.2em;color:var(--cream-muted);}
+.hole-num{font-family:'Bebas Neue',sans-serif;font-size:6rem;color:var(--gold);line-height:0.9;text-shadow:0 0 60px rgba(212,168,67,0.3);}
+.hole-wolf-badge{display:inline-flex;align-items:center;gap:0.4rem;background:rgba(212,168,67,0.12);border:1px solid var(--gold);border-radius:20px;padding:0.3rem 0.9rem;font-size:0.82rem;font-weight:700;color:var(--gold);margin-top:0.4rem;}
+
+/* CHASE HOLE SPECIAL */
+.chase-header{background:linear-gradient(135deg,rgba(192,57,43,0.2),rgba(212,168,67,0.15));border:1px solid rgba(192,57,43,0.4);border-radius:12px;padding:1rem;text-align:center;margin-bottom:1.25rem;}
+.chase-title{font-family:'Bebas Neue',sans-serif;font-size:2rem;letter-spacing:0.15em;color:var(--red-light);}
+.chase-sub{font-size:0.82rem;color:var(--cream-muted);margin-top:0.25rem;}
+.chase-wolf-name{font-size:1rem;font-weight:700;color:var(--gold);margin-top:0.4rem;}
+
+.section-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1.1rem;margin-bottom:0.9rem;}
+.section-title{font-family:'Bebas Neue',sans-serif;font-size:1rem;letter-spacing:0.1em;color:var(--gold-dim);margin-bottom:0.9rem;}
+
+/* BLIND WOLF */
+.blind-wolf-btn{width:100%;padding:0.9rem;background:rgba(192,57,43,0.15);border:2px solid rgba(192,57,43,0.5);border-radius:10px;color:#e74c3c;font-family:'Bebas Neue',sans-serif;font-size:1.3rem;letter-spacing:0.1em;cursor:pointer;transition:all 0.2s;-webkit-tap-highlight-color:transparent;}
+.blind-wolf-btn:hover,.blind-wolf-btn.active{background:rgba(192,57,43,0.3);border-color:var(--red-light);box-shadow:0 0 20px rgba(192,57,43,0.3);}
+.blind-wolf-btn.active{color:#fff;}
+
+/* PLAYER SELECTION */
+.player-select-grid{display:flex;flex-direction:column;gap:0.5rem;}
+.player-option{display:flex;align-items:center;justify-content:space-between;padding:0.75rem 0.9rem;background:rgba(0,0,0,0.2);border:2px solid var(--border);border-radius:10px;cursor:pointer;transition:all 0.15s;-webkit-tap-highlight-color:transparent;}
+.player-option:hover{border-color:rgba(212,168,67,0.4);}
+.player-option.wolf-player{background:rgba(212,168,67,0.08);border-color:var(--gold);cursor:default;}
+.player-option.selected{border-color:var(--gold);background:rgba(212,168,67,0.12);}
+.player-option.lone{border-color:var(--red-light);background:rgba(192,57,43,0.1);}
+.po-left{display:flex;align-items:center;gap:0.65rem;}
+.po-avatar{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:0.85rem;color:#fff;flex-shrink:0;}
+.po-name{font-weight:600;font-size:0.92rem;}
+.po-role{font-size:0.72rem;color:var(--cream-muted);}
+.po-check{width:22px;height:22px;border-radius:50%;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:0.8rem;transition:all 0.15s;}
+.player-option.selected .po-check,.player-option.wolf-player .po-check{background:var(--gold);border-color:var(--gold);color:var(--felt);}
+.player-option.lone .po-check{background:var(--red-light);border-color:var(--red-light);color:#fff;}
+
+.lone-wolf-btn{width:100%;padding:0.8rem;background:rgba(192,57,43,0.1);border:2px solid rgba(192,57,43,0.3);border-radius:10px;color:var(--red-light);font-family:'Bebas Neue',sans-serif;font-size:1.2rem;letter-spacing:0.1em;cursor:pointer;transition:all 0.2s;margin-top:0.5rem;-webkit-tap-highlight-color:transparent;}
+.lone-wolf-btn.active{background:rgba(192,57,43,0.25);border-color:var(--red-light);color:#fff;box-shadow:0 0 16px rgba(192,57,43,0.3);}
+
+/* MULTIPLIER DISPLAY */
+.multiplier-display{background:rgba(0,0,0,0.3);border-radius:10px;padding:1rem;text-align:center;margin-bottom:0.75rem;}
+.mult-label{font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--cream-muted);}
+.mult-value{font-family:'Bebas Neue',sans-serif;font-size:3rem;color:var(--gold);line-height:1;letter-spacing:0.05em;}
+.mult-breakdown{font-size:0.75rem;color:var(--cream-muted);margin-top:0.25rem;}
+.mult-tags{display:flex;justify-content:center;gap:0.4rem;flex-wrap:wrap;margin-top:0.5rem;}
+.mult-tag{padding:0.2rem 0.6rem;border-radius:20px;font-size:0.72rem;font-weight:700;}
+.mt-lone{background:rgba(192,57,43,0.2);color:var(--red-light);border:1px solid rgba(192,57,43,0.4);}
+.mt-blind{background:rgba(192,57,43,0.2);color:var(--red-light);border:1px solid rgba(192,57,43,0.4);}
+.mt-birdie{background:rgba(39,174,96,0.2);color:#6fcf97;border:1px solid rgba(39,174,96,0.4);}
+.mt-hammer{background:rgba(212,168,67,0.2);color:var(--gold);border:1px solid var(--border);}
+
+/* BIRDIE TOGGLES */
+.birdie-grid{display:flex;gap:0.5rem;flex-wrap:wrap;}
+.birdie-btn{flex:1;min-width:80px;padding:0.6rem 0.4rem;background:rgba(0,0,0,0.2);border:2px solid var(--border);border-radius:8px;color:var(--cream-muted);font-size:0.78rem;font-weight:600;text-align:center;cursor:pointer;transition:all 0.15s;-webkit-tap-highlight-color:transparent;}
+.birdie-btn.active{background:rgba(39,174,96,0.15);border-color:#27ae60;color:#6fcf97;}
+
+/* HAMMER */
+.hammer-section{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;}
+.hammer-btn{padding:0.55rem 1.1rem;background:rgba(212,168,67,0.1);border:1px solid var(--border);border-radius:8px;color:var(--cream-muted);font-size:0.82rem;font-weight:600;cursor:pointer;transition:all 0.15s;}
+.hammer-btn.active{background:rgba(212,168,67,0.2);border-color:var(--gold);color:var(--gold);}
+
+/* WINNER SELECTION */
+.winner-option{display:flex;align-items:center;justify-content:space-between;padding:0.85rem 0.9rem;background:rgba(0,0,0,0.2);border:2px solid var(--border);border-radius:10px;cursor:pointer;transition:all 0.15s;margin-bottom:0.5rem;-webkit-tap-highlight-color:transparent;}
+.winner-option.selected{border-color:var(--green-win);background:rgba(39,174,96,0.1);}
+.winner-option:last-child{margin-bottom:0;}
+.wo-team{font-weight:700;font-size:0.9rem;}
+.wo-players{font-size:0.75rem;color:var(--cream-muted);}
+.wo-check{width:22px;height:22px;border-radius:50%;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;}
+.winner-option.selected .wo-check{background:var(--green-win);border-color:var(--green-win);color:#fff;font-size:0.8rem;}
+
+/* PAYOUT PREVIEW */
+.payout-grid{display:flex;flex-direction:column;gap:0.4rem;}
+.payout-row{display:flex;align-items:center;justify-content:space-between;padding:0.5rem 0.75rem;background:rgba(0,0,0,0.15);border-radius:8px;}
+.payout-name{font-size:0.85rem;font-weight:600;}
+.payout-amt{font-family:'Bebas Neue',sans-serif;font-size:1.2rem;letter-spacing:0.05em;}
+.payout-amt.win{color:var(--green-win);}
+.payout-amt.loss{color:var(--red-light);}
+
+/* CONFIRM BUTTON */
+.btn-confirm{width:100%;padding:1rem;background:linear-gradient(135deg,var(--green-win),#2ecc71);color:#fff;font-family:'Bebas Neue',sans-serif;font-size:1.5rem;letter-spacing:0.1em;border:none;border-radius:10px;cursor:pointer;transition:all 0.2s;margin-top:0.5rem;-webkit-tap-highlight-color:transparent;}
+.btn-confirm:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(39,174,96,0.4);}
+.btn-confirm:disabled{opacity:0.4;cursor:not-allowed;transform:none;box-shadow:none;}
+
+/* HISTORY */
+#history-panel{max-width:600px;margin:0 auto;padding:0 1rem 2rem;}
+.hist-hole{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:0.9rem 1rem;margin-bottom:0.6rem;}
+.hist-hole-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:0.5rem;}
+.hist-hole-num{font-family:'Bebas Neue',sans-serif;font-size:1rem;letter-spacing:0.08em;color:var(--gold);}
+.hist-format{font-size:0.72rem;color:var(--cream-muted);}
+.hist-payouts{display:flex;gap:0.4rem;flex-wrap:wrap;}
+.hist-pill{padding:0.2rem 0.55rem;border-radius:20px;font-size:0.73rem;font-weight:700;}
+.hist-pill.w{background:rgba(39,174,96,0.15);color:#6fcf97;border:1px solid rgba(39,174,96,0.3);}
+.hist-pill.l{background:rgba(192,57,43,0.15);color:var(--red-light);border:1px solid rgba(192,57,43,0.3);}
+
+/* SETTLEMENT SCREEN */
+#settlement{background:radial-gradient(ellipse at 50% 0%,#1a3d25 0%,var(--felt) 60%);min-height:100vh;padding:2rem 1rem;}
+.settle-title{font-family:'Bebas Neue',sans-serif;font-size:3.5rem;letter-spacing:0.15em;color:var(--gold);text-align:center;margin-bottom:0.25rem;}
+.settle-sub{text-align:center;font-family:'Playfair Display',serif;font-style:italic;color:var(--cream-muted);margin-bottom:2rem;}
+.settle-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:1.25rem;max-width:500px;margin:0 auto 1rem;}
+.settle-player{display:flex;align-items:center;justify-content:space-between;padding:0.9rem 0;border-bottom:1px solid var(--border);}
+.settle-player:last-child{border-bottom:none;}
+.settle-left{display:flex;align-items:center;gap:0.75rem;}
+.settle-avatar{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1rem;color:#fff;}
+.settle-name{font-weight:700;}
+.settle-detail{font-size:0.75rem;color:var(--cream-muted);}
+.settle-amount{font-family:'Bebas Neue',sans-serif;font-size:2rem;letter-spacing:0.05em;}
+.settle-amount.pos{color:var(--green-win);}
+.settle-amount.neg{color:var(--red-light);}
+
+.settle-transfers{max-width:500px;margin:0 auto 1rem;}
+.transfer-row{display:flex;align-items:center;gap:0.5rem;padding:0.6rem 0.9rem;background:var(--card);border:1px solid var(--border);border-radius:8px;margin-bottom:0.4rem;font-size:0.85rem;}
+.transfer-arrow{color:var(--gold);font-size:1rem;}
+
+.btn-new-game{width:100%;max-width:500px;display:block;margin:1.5rem auto 0;padding:1rem;background:linear-gradient(135deg,var(--gold),var(--gold-light));color:var(--felt);font-family:'Bebas Neue',sans-serif;font-size:1.5rem;letter-spacing:0.15em;border:none;border-radius:12px;cursor:pointer;}
+
+/* TABS */
+.game-tabs{display:flex;background:rgba(0,0,0,0.3);border-bottom:1px solid var(--border);}
+.gtab{flex:1;padding:0.7rem;text-align:center;font-size:0.8rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--cream-muted);cursor:pointer;border-bottom:2px solid transparent;transition:all 0.15s;}
+.gtab.active{color:var(--gold);border-bottom-color:var(--gold);}
+
+.tab-panel{display:none;}
+.tab-panel.active{display:block;}
+
+/* CHASE MODE BANNER */
+.chase-mode-banner{background:linear-gradient(135deg,rgba(192,57,43,0.3),rgba(212,168,67,0.2));border:1px solid rgba(192,57,43,0.5);border-radius:10px;padding:1rem;text-align:center;margin:0 1rem 1rem;}
+.cmb-title{font-family:'Bebas Neue',sans-serif;font-size:1.8rem;letter-spacing:0.15em;color:var(--red-light);}
+.cmb-sub{font-size:0.8rem;color:var(--cream-muted);}
+
+/* CHASE BET INPUT */
+.chase-bet-wrap{background:rgba(0,0,0,0.3);border-radius:10px;padding:0.9rem;margin-bottom:0.75rem;}
+.chase-bet-label{font-size:0.75rem;color:var(--cream-muted);margin-bottom:0.4rem;}
+.chase-bet-input{width:100%;background:rgba(0,0,0,0.3);border:1px solid var(--border);color:var(--gold);padding:0.6rem 0.8rem;border-radius:7px;font-size:1.2rem;font-weight:700;font-family:'Inter',sans-serif;}
+.chase-bet-input:focus{outline:none;border-color:var(--gold);}
+.chase-bet-max{font-size:0.72rem;color:var(--cream-muted);margin-top:0.3rem;}
+
+@media(max-width:400px){.hole-num{font-size:4.5rem;}.mult-value{font-size:2.5rem;}}
+</style>
+</head>
+<body>
+
+<!-- ══ SETUP SCREEN ══ -->
+<div id="setup" class="screen active">
+  <div class="wolf-logo">
+    <div style="font-size:3.5rem;margin-bottom:0.25rem">🐺</div>
+    <div class="w-title">WOLF</div>
+    <div class="w-sub">Stakes Play</div>
+    <div class="w-tagline">It's all fore play until the chase holes</div>
+  </div>
+
+  <div class="setup-card">
+    <div class="setup-section-title">Players</div>
+    <div class="field-row" style="margin-bottom:0.75rem">
+      <div class="field-group">
+        <label class="field-label">Number of Players</label>
+        <select class="field-input" id="numPlayers" onchange="updatePlayerInputs()">
+          <option value="4">4 Players</option>
+          <option value="5" selected>5 Players</option>
+          <option value="6">6 Players</option>
+        </select>
+      </div>
+    </div>
+    <div class="player-inputs" id="playerInputs"></div>
+  </div>
+
+  <div class="setup-card">
+    <div class="setup-section-title">Betting</div>
+    <div class="field-row">
+      <div class="field-group">
+        <label class="field-label">Base Bet Per Person ($)</label>
+        <input class="field-input" type="number" id="baseBet" value="50" min="1" max="1000"/>
+      </div>
+      <div class="field-group">
+        <label class="field-label">Holes</label>
+        <select class="field-input" id="numHoles">
+          <option value="18" selected>18 Holes</option>
+          <option value="9">9 Holes (no chase)</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="toggle-row">
+      <div>
+        <div class="toggle-label">🐦 Birdie Doubles</div>
+        <div class="toggle-sub">Any birdie on the hole doubles the bet</div>
+      </div>
+      <label class="toggle"><input type="checkbox" id="enableBirdie" checked/><span class="toggle-slider"></span></label>
+    </div>
+    <div class="toggle-row">
+      <div>
+        <div class="toggle-label">🔨 Hammers</div>
+        <div class="toggle-sub">Any team can hammer to double mid-hole</div>
+      </div>
+      <label class="toggle"><input type="checkbox" id="enableHammer"/><span class="toggle-slider"></span></label>
+    </div>
+    <div class="toggle-row">
+      <div>
+        <div class="toggle-label">🐺 Blind Wolf Allowed</div>
+        <div class="toggle-sub">Wolf can go blind before anyone tees off</div>
+      </div>
+      <label class="toggle"><input type="checkbox" id="enableBlind" checked/><span class="toggle-slider"></span></label>
+    </div>
+  </div>
+
+  <button class="btn-start" onclick="startGame()">START THE HUNT</button>
+  <div style="height:2rem"></div>
+</div>
+
+<!-- ══ GAME SCREEN ══ -->
+<div id="game" class="screen">
+  <div class="game-nav">
+    <div>
+      <div class="gn-title" id="gameTitle">WOLF</div>
+      <div class="gn-hole" id="gameSubtitle"></div>
+    </div>
+    <button class="btn-sm-outline" onclick="endGame()">End & Settle</button>
+  </div>
+
+  <div class="standings-bar" id="standingsBar"></div>
+
+  <div class="game-tabs">
+    <div class="gtab active" onclick="switchTab('play')">🐺 Play</div>
+    <div class="gtab" onclick="switchTab('history')">📋 History</div>
+  </div>
+
+  <div id="tab-play" class="tab-panel active">
+    <div class="hole-card" id="holeCard"></div>
+  </div>
+  <div id="tab-history" class="tab-panel">
+    <div id="history-panel"></div>
+  </div>
+</div>
+
+<!-- ══ SETTLEMENT SCREEN ══ -->
+<div id="settlement" class="screen">
+  <div class="settle-title">SETTLED</div>
+  <div class="settle-sub">Final standings after 18 holes</div>
+  <div class="settle-card" id="settlementCards"></div>
+  <div class="settle-transfers" id="settlementTransfers"></div>
+  <button class="btn-new-game" onclick="newGame()">NEW GAME</button>
+  <div style="height:2rem"></div>
+</div>
+
+<script>
+// ─────────────────────────────────────
+//  PERSISTENCE
+// ─────────────────────────────────────
+const SAVE_KEY = 'caddie_game_wolf';
+function saveG() { try { if (G) localStorage.setItem(SAVE_KEY, JSON.stringify(G)); } catch(e) {} }
+function clearSave() { try { localStorage.removeItem(SAVE_KEY); } catch(e) {} }
+
+// ─────────────────────────────────────
+//  CONSTANTS
+// ─────────────────────────────────────
+const PLAYER_COLORS = ['#d4a843','#3a9bd5','#e74c3c','#9b59b6','#27ae60','#e67e22'];
+const PLAYER_LABELS = ['A','B','C','D','E','F'];
+
+// ─────────────────────────────────────
+//  GAME STATE
+// ─────────────────────────────────────
+let G = null; // current game
+
+function freshHoleState() {
+  return {
+    wolfIdx:       null,   // index into G.players
+    isBlindWolf:   false,
+    isLoneWolf:    false,
+    partnerIdx:    null,   // index of partner (if 2v rest)
+    birdies:       [],     // player indices who made birdie
+    hammers:       [],     // player indices who hammered
+    winnerTeam:    null,   // 'wolf' or 'other'
+    baseBet:       0,
+    multiplier:    1,
+    payouts:       {},     // { playerIdx: amount }
+    confirmed:     false,
+    isChase:       false,
+    chaseBetInput: 0,
+  };
+}
+
+// ─────────────────────────────────────
+//  SETUP
+// ─────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  updatePlayerInputs();
+  // Restore in-progress game if one exists
+  try {
+    const saved = localStorage.getItem(SAVE_KEY);
+    if (saved) {
+      G = JSON.parse(saved);
+      const resumeBanner = document.createElement('div');
+      resumeBanner.style.cssText = 'max-width:560px;margin:0 auto 1rem;background:rgba(212,168,67,0.12);border:1px solid rgba(212,168,67,0.35);border-radius:10px;padding:0.75rem 1rem;display:flex;align-items:center;justify-content:space-between;gap:0.75rem;flex-wrap:wrap;font-size:0.85rem';
+      resumeBanner.innerHTML = `<span style="color:var(--gold)">🐺 Game in progress — Hole ${G.currentHole} of ${G.numHoles}</span><div style="display:flex;gap:0.5rem"><button onclick="resumeGame()" style="background:var(--gold);color:var(--felt);border:none;border-radius:6px;padding:0.35rem 0.85rem;font-weight:700;cursor:pointer;font-size:0.8rem">Resume</button><button onclick="discardGame()" style="background:none;border:1px solid rgba(255,255,255,0.15);color:var(--cream-muted);border-radius:6px;padding:0.35rem 0.7rem;cursor:pointer;font-size:0.8rem">Discard</button></div>`;
+      document.getElementById('setup').insertBefore(resumeBanner, document.getElementById('setup').firstChild);
+    }
+  } catch(e) {}
+});
+
+function updatePlayerInputs() {
+  const n = parseInt(document.getElementById('numPlayers').value);
+  const names = ['Alice','Bob','Carlos','Diana','Eddie','Frank'];
+  const container = document.getElementById('playerInputs');
+  container.innerHTML = Array.from({length:n}, (_,i) => `
+    <div class="player-row">
+      <div class="player-num p${i+1}" style="background:${PLAYER_COLORS[i]}">${PLAYER_LABELS[i]}</div>
+      <input class="field-input" id="pname_${i}" placeholder="${names[i]}" value="${names[i]}" style="flex:1"/>
+    </div>`).join('');
+}
+
+function resumeGame() { initHole(); showScreen('game'); }
+function discardGame() { G = null; clearSave(); location.reload(); }
+
+function startGame() {
+  const n       = parseInt(document.getElementById('numPlayers').value);
+  const holes   = parseInt(document.getElementById('numHoles').value);
+  const base    = parseFloat(document.getElementById('baseBet').value) || 50;
+  const players = Array.from({length:n}, (_,i) => ({
+    name:    document.getElementById(`pname_${i}`).value.trim() || `Player ${i+1}`,
+    color:   PLAYER_COLORS[i],
+    label:   PLAYER_LABELS[i],
+    balance: 0,
+  }));
+
+  G = {
+    players,
+    numHoles:      holes,
+    baseBet:       base,
+    enableBirdie:  document.getElementById('enableBirdie').checked,
+    enableHammer:  document.getElementById('enableHammer').checked,
+    enableBlind:   document.getElementById('enableBlind').checked,
+    currentHole:   1,
+    holes:         [],        // confirmed hole results
+    holeState:     freshHoleState(),
+  };
+
+  saveG();
+  initHole();
+  showScreen('game');
+}
+
+// ─────────────────────────────────────
+//  HOLE LOGIC
+// ─────────────────────────────────────
+function initHole() {
+  const h   = G.currentHole;
+  const hs  = G.holeState;
+  const n   = G.players.length;
+  const isChase = G.numHoles === 18 && h >= 16;
+
+  hs.isChase  = isChase;
+  hs.baseBet  = G.baseBet;
+  hs.multiplier = 1;
+
+  if (isChase) {
+    // Wolf = biggest loser
+    const standings = getStandings();
+    hs.wolfIdx = standings[standings.length - 1].idx; // most negative
+    hs.chaseBetInput = G.baseBet;
+  } else {
+    // Standard rotation
+    hs.wolfIdx = (h - 1) % n;
+  }
+
+  renderGame();
+}
+
+function getStandings() {
+  return G.players
+    .map((p, idx) => ({ idx, name: p.name, balance: p.balance }))
+    .sort((a, b) => a.balance - b.balance); // ascending = biggest loser first
+}
+
+function calcMultiplier() {
+  const hs = G.holeState;
+  let m = 1;
+  const tags = [];
+  if (hs.isBlindWolf) { m *= 2; tags.push({cls:'mt-blind', label:'BLIND ×2'}); }
+  if (hs.isLoneWolf)  { m *= 2; tags.push({cls:'mt-lone',  label:'LONE ×2'}); }
+  if (G.enableBirdie && hs.birdies.length > 0) {
+    hs.birdies.forEach(() => { m *= 2; });
+    tags.push({cls:'mt-birdie', label:`BIRDIE ×${Math.pow(2,hs.birdies.length)}`});
+  }
+  if (G.enableHammer && hs.hammers.length > 0) {
+    hs.hammers.forEach(() => { m *= 2; });
+    tags.push({cls:'mt-hammer', label:`HAMMER ×${Math.pow(2,hs.hammers.length)}`});
+  }
+  return { multiplier: m, tags };
+}
+
+function calcPayouts(winnerTeam) {
+  const hs   = G.holeState;
+  const n    = G.players.length;
+  const { multiplier } = calcMultiplier();
+  const bet  = hs.isChase ? (hs.chaseBetInput || G.baseBet) : G.baseBet;
+  const base = bet * multiplier;
+  const payouts = {};
+  G.players.forEach((_,i) => payouts[i] = 0);
+
+  const wolfIdx   = hs.wolfIdx;
+  const isLone    = hs.isLoneWolf;
+  const partnerIdx = hs.partnerIdx;
+
+  if (isLone) {
+    if (winnerTeam === 'wolf') {
+      payouts[wolfIdx] = base * (n - 1);
+      G.players.forEach((_,i) => { if (i !== wolfIdx) payouts[i] = -base; });
+    } else {
+      payouts[wolfIdx] = -base * (n - 1);
+      G.players.forEach((_,i) => { if (i !== wolfIdx) payouts[i] = base; });
+    }
+  } else {
+    // 2v(n-2) — wolf + partner vs rest
+    const wolfTeam  = [wolfIdx, partnerIdx].filter(i => i !== null);
+    const otherTeam = G.players.map((_,i)=>i).filter(i => !wolfTeam.includes(i));
+
+    if (winnerTeam === 'wolf') {
+      const loserPay   = base;
+      const totalWon   = otherTeam.length * loserPay;
+      const perWinner  = totalWon / wolfTeam.length;
+      wolfTeam.forEach(i  => { payouts[i] =  perWinner; });
+      otherTeam.forEach(i => { payouts[i] = -loserPay; });
+    } else {
+      const loserPay   = base;
+      const totalWon   = wolfTeam.length * loserPay;
+      const perWinner  = totalWon / otherTeam.length;
+      wolfTeam.forEach(i  => { payouts[i] = -loserPay; });
+      otherTeam.forEach(i => { payouts[i] =  perWinner; });
+    }
+  }
+
+  // round to 2dp
+  Object.keys(payouts).forEach(k => payouts[k] = Math.round(payouts[k]*100)/100);
+  return payouts;
+}
+
+function confirmHole(winnerTeam) {
+  const hs = G.holeState;
+  if (!hs.isLoneWolf && hs.partnerIdx === null && !hs.isBlindWolf) {
+    alert('Select a partner or declare Lone Wolf first!');
+    return;
+  }
+
+  const payouts = calcPayouts(winnerTeam);
+  hs.payouts    = payouts;
+  hs.winnerTeam = winnerTeam;
+  hs.confirmed  = true;
+
+  // Apply to balances
+  G.players.forEach((_,i) => G.players[i].balance += payouts[i]);
+
+  // Save hole
+  G.holes.push({ ...hs, hole: G.currentHole });
+
+  if (G.currentHole >= G.numHoles) {
+    endGame();
+    return;
+  }
+
+  G.currentHole++;
+  G.holeState = freshHoleState();
+  saveG();
+  initHole();
+  switchTab('play');
+}
+
+// ─────────────────────────────────────
+//  RENDER
+// ─────────────────────────────────────
+function renderGame() {
+  updateStandingsBar();
+  renderHoleCard();
+  renderHistory();
+  document.getElementById('gameTitle').textContent = '🐺 WOLF — STAKES PLAY';
+  document.getElementById('gameSubtitle').textContent = `Hole ${G.currentHole} of ${G.numHoles}`;
+}
+
+function updateStandingsBar() {
+  const bar = document.getElementById('standingsBar');
+  bar.innerHTML = G.players.map((p,i) => {
+    const cls = p.balance > 0 ? 'pos' : p.balance < 0 ? 'neg' : 'zero';
+    const sign = p.balance > 0 ? '+' : '';
+    return `<div class="standing-pill">
+      <div class="sp-name">${p.name.split(' ')[0].substring(0,6)}</div>
+      <div class="sp-amt ${cls}">${sign}$${Math.abs(p.balance).toFixed(0)}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderHoleCard() {
+  const hs   = G.holeState;
+  const h    = G.currentHole;
+  const wolf = G.players[hs.wolfIdx];
+  const { multiplier, tags } = calcMultiplier();
+  const bet  = hs.isChase ? (hs.chaseBetInput || G.baseBet) : G.baseBet;
+  const effectiveBet = bet * multiplier;
+  const card = document.getElementById('holeCard');
+
+  let html = '';
+
+  // Chase mode banner
+  if (hs.isChase) {
+    const standings = getStandings();
+    const loser = standings[0];
+    const maxBet = Math.min(200, Math.abs(loser.balance) / 2);
+    html += `
+      <div class="chase-mode-banner">
+        <div class="cmb-title">🔥 CHASE MODE</div>
+        <div class="cmb-sub">${h === 16 ? '"Fireworks start now."' : h === 17 ? '"Still in the hunt."' : '"Last chance. All in."'}</div>
+      </div>`;
+    html += `
+      <div class="section-card">
+        <div class="section-title">Chase Wolf</div>
+        <div class="chase-bet-wrap">
+          <div class="chase-bet-label">Biggest loser sets the base bet</div>
+          <div class="chase-wolf-name">🐺 ${wolf.name} is Wolf (down $${Math.abs(wolf.balance).toFixed(0)})</div>
+          <div style="margin-top:0.75rem">
+            <label class="field-label">Base Bet Per Person ($)</label>
+            <input class="chase-bet-input field-input" type="number" id="chaseBetInput"
+              value="${hs.chaseBetInput || G.baseBet}"
+              min="1" max="${maxBet}"
+              oninput="updateChaseBet(this.value)"/>
+            <div class="chase-bet-max">Max: $${maxBet.toFixed(0)} (half of $${Math.abs(loser.balance).toFixed(0)} down)</div>
+          </div>
+        </div>
+      </div>`;
+  } else {
+    // Standard hole header
+    html += `
+      <div class="hole-header">
+        <div class="hole-badge">HOLE</div>
+        <div class="hole-num">${h}</div>
+        <div class="hole-wolf-badge">🐺 ${wolf.name} is Wolf</div>
+      </div>`;
+  }
+
+  // Blind Wolf
+  if (G.enableBlind && !hs.isLoneWolf && hs.partnerIdx === null) {
+    html += `
+      <div class="section-card">
+        <div class="section-title">Before Anyone Tees Off</div>
+        <button class="blind-wolf-btn ${hs.isBlindWolf?'active':''}" onclick="toggleBlindWolf()">
+          ${hs.isBlindWolf ? '🐺 BLIND WOLF — DECLARED!' : '🐺 DECLARE BLIND WOLF (2×)'}
+        </button>
+        <div style="font-size:0.72rem;color:var(--cream-muted);margin-top:0.5rem;text-align:center">Wolf commits 1v${G.players.length-1} before seeing anyone tee off</div>
+      </div>`;
+  }
+
+  // Partner selection
+  if (!hs.isBlindWolf) {
+    html += `
+      <div class="section-card">
+        <div class="section-title">Wolf's Decision</div>
+        <div class="player-select-grid">
+          ${G.players.map((p,i) => {
+            if (i === hs.wolfIdx) return `
+              <div class="player-option wolf-player">
+                <div class="po-left">
+                  <div class="po-avatar" style="background:${p.color}">${p.label}</div>
+                  <div><div class="po-name">${p.name}</div><div class="po-role">The Wolf 🐺</div></div>
+                </div>
+                <div class="po-check">🐺</div>
+              </div>`;
+            const isPartner = hs.partnerIdx === i;
+            const isLone = hs.isLoneWolf;
+            return `
+              <div class="player-option ${isPartner&&!isLone?'selected':''} ${isLone?'lone':''}" onclick="selectPartner(${i})">
+                <div class="po-left">
+                  <div class="po-avatar" style="background:${p.color}">${p.label}</div>
+                  <div><div class="po-name">${p.name}</div><div class="po-role">${isPartner&&!isLone?'Partner ✓':isLone?'Opponent':'—'}</div></div>
+                </div>
+                <div class="po-check">${isPartner&&!isLone?'✓':''}</div>
+              </div>`;
+          }).join('')}
+        </div>
+        <button class="lone-wolf-btn ${hs.isLoneWolf?'active':''}" onclick="toggleLoneWolf()">
+          🐺 ${hs.isLoneWolf ? 'LONE WOLF — 1 vs ALL!' : 'GO LONE WOLF (2×)'}
+        </button>
+      </div>`;
+  } else {
+    // Blind wolf — show all as opponents
+    html += `
+      <div class="section-card" style="border-color:rgba(192,57,43,0.4)">
+        <div class="section-title" style="color:var(--red-light)">Blind Wolf: 1 vs ${G.players.length-1}</div>
+        ${G.players.map((p,i) => i === hs.wolfIdx ? '' : `
+          <div class="player-option lone" style="margin-bottom:0.4rem">
+            <div class="po-left">
+              <div class="po-avatar" style="background:${p.color}">${p.label}</div>
+              <div class="po-name">${p.name}</div>
+            </div>
+            <div style="font-size:0.75rem;color:var(--red-light)">Opponent</div>
+          </div>`).join('')}
+      </div>`;
+  }
+
+  // Multiplier display
+  const canShowMult = hs.isLoneWolf || hs.isBlindWolf || hs.partnerIdx !== null;
+  if (canShowMult) {
+    html += `
+      <div class="section-card">
+        <div class="section-title">Current Stakes</div>
+        <div class="multiplier-display">
+          <div class="mult-label">Effective Bet Per Person</div>
+          <div class="mult-value">$${effectiveBet.toFixed(0)}</div>
+          <div class="mult-breakdown">Base $${bet} × ${multiplier}</div>
+          ${tags.length ? `<div class="mult-tags">${tags.map(t=>`<span class="mult-tag ${t.cls}">${t.label}</span>`).join('')}</div>` : ''}
+        </div>`;
+
+    // Birdies
+    if (G.enableBirdie) {
+      html += `
+        <div class="section-title" style="margin-top:0.75rem">Birdies on This Hole</div>
+        <div class="birdie-grid">
+          ${G.players.map((p,i) => `
+            <div class="birdie-btn ${hs.birdies.includes(i)?'active':''}" onclick="toggleBirdie(${i})">
+              ${p.name.split(' ')[0]}<br>🐦
+            </div>`).join('')}
+        </div>`;
+    }
+
+    // Hammers
+    if (G.enableHammer) {
+      html += `
+        <div class="section-title" style="margin-top:0.75rem">Hammers</div>
+        <div class="hammer-section">
+          ${G.players.map((p,i) => `
+            <button class="hammer-btn ${hs.hammers.includes(i)?'active':''}" onclick="toggleHammer(${i})">
+              🔨 ${p.name.split(' ')[0]}
+            </button>`).join('')}
+        </div>`;
+    }
+
+    html += `</div>`;
+
+    // Winner selection
+    const wolfTeam  = hs.isLoneWolf || hs.isBlindWolf
+      ? [hs.wolfIdx]
+      : [hs.wolfIdx, hs.partnerIdx].filter(i=>i!==null);
+    const otherTeam = G.players.map((_,i)=>i).filter(i=>!wolfTeam.includes(i));
+    const wolfNames  = wolfTeam.map(i=>G.players[i].name).join(' & ');
+    const otherNames = otherTeam.map(i=>G.players[i].name).join(', ');
+
+    // Preview payouts for both outcomes
+    const payoutsIfWolf  = calcPayouts('wolf');
+    const payoutsIfOther = calcPayouts('other');
+
+    html += `
+      <div class="section-card">
+        <div class="section-title">Who Won the Hole?</div>
+        <div class="winner-option ${hs.winnerTeam==='wolf'?'selected':''}" onclick="selectWinner('wolf')">
+          <div>
+            <div class="wo-team">🐺 Wolf Team Wins</div>
+            <div class="wo-players">${wolfNames}</div>
+          </div>
+          <div class="wo-check">${hs.winnerTeam==='wolf'?'✓':''}</div>
+        </div>
+        <div class="winner-option ${hs.winnerTeam==='other'?'selected':''}" onclick="selectWinner('other')">
+          <div>
+            <div class="wo-team">👥 Other Team Wins</div>
+            <div class="wo-players">${otherNames}</div>
+          </div>
+          <div class="wo-check">${hs.winnerTeam==='other'?'✓':''}</div>
+        </div>
+      </div>`;
+
+    // Payout preview
+    if (hs.winnerTeam) {
+      const payouts = hs.winnerTeam === 'wolf' ? payoutsIfWolf : payoutsIfOther;
+      html += `
+        <div class="section-card">
+          <div class="section-title">Payouts</div>
+          <div class="payout-grid">
+            ${G.players.map((p,i) => {
+              const amt = payouts[i];
+              const sign = amt >= 0 ? '+' : '';
+              return `<div class="payout-row">
+                <div style="display:flex;align-items:center;gap:0.5rem">
+                  <div class="po-avatar" style="width:24px;height:24px;background:${p.color};font-size:0.7rem">${p.label}</div>
+                  <div class="payout-name">${p.name}</div>
+                </div>
+                <div class="payout-amt ${amt>=0?'win':'loss'}">${sign}$${Math.abs(amt).toFixed(2)}</div>
+              </div>`;
+            }).join('')}
+          </div>
+        </div>
+        <button class="btn-confirm" onclick="confirmHole('${hs.winnerTeam}')">
+          CONFIRM HOLE ${h}
+        </button>`;
+    }
+  }
+
+  card.innerHTML = html;
+
+  // restore chase bet input value
+  if (hs.isChase) {
+    const inp = document.getElementById('chaseBetInput');
+    if (inp) inp.value = hs.chaseBetInput || G.baseBet;
+  }
+}
+
+function renderHistory() {
+  const el = document.getElementById('history-panel');
+  if (!G.holes.length) {
+    el.innerHTML = '<div style="text-align:center;padding:3rem;color:var(--cream-muted)">No holes completed yet.</div>';
+    return;
+  }
+  el.innerHTML = [...G.holes].reverse().map(h => {
+    const wolf = G.players[h.wolfIdx];
+    const format = h.isLoneWolf||h.isBlindWolf ? 'Lone/Blind' : '2v'+(G.players.length-2);
+    const multInfo = h.multiplier > 1 ? ` · ×${h.multiplier}` : '';
+    return `<div class="hist-hole">
+      <div class="hist-hole-header">
+        <div class="hist-hole-num">HOLE ${h.hole} ${h.isChase?'🔥':''}</div>
+        <div class="hist-format">🐺 ${wolf.name} · ${format}${multInfo} · Base $${h.isChase?(h.chaseBetInput||G.baseBet):G.baseBet}</div>
+      </div>
+      <div class="hist-payouts">
+        ${G.players.map((p,i) => {
+          const amt = h.payouts[i] || 0;
+          const sign = amt >= 0 ? '+' : '';
+          return `<span class="hist-pill ${amt>=0?'w':'l'}">${p.name.split(' ')[0]}: ${sign}$${Math.abs(amt).toFixed(0)}</span>`;
+        }).join('')}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ─────────────────────────────────────
+//  INTERACTIONS
+// ─────────────────────────────────────
+function toggleBlindWolf() {
+  G.holeState.isBlindWolf = !G.holeState.isBlindWolf;
+  if (G.holeState.isBlindWolf) {
+    G.holeState.isLoneWolf = true;
+    G.holeState.partnerIdx = null;
+  } else {
+    G.holeState.isLoneWolf = false;
+  }
+  const m = calcMultiplier();
+  G.holeState.multiplier = m.multiplier;
+  saveG();
+  renderHoleCard();
+  updateStandingsBar();
+}
+
+function selectPartner(idx) {
+  if (idx === G.holeState.wolfIdx) return;
+  if (G.holeState.isLoneWolf) { G.holeState.isLoneWolf = false; }
+  G.holeState.partnerIdx = G.holeState.partnerIdx === idx ? null : idx;
+  G.holeState.winnerTeam = null;
+  const m = calcMultiplier();
+  G.holeState.multiplier = m.multiplier;
+  saveG();
+  renderHoleCard();
+}
+
+function toggleLoneWolf() {
+  G.holeState.isLoneWolf = !G.holeState.isLoneWolf;
+  if (G.holeState.isLoneWolf) G.holeState.partnerIdx = null;
+  G.holeState.winnerTeam = null;
+  const m = calcMultiplier();
+  G.holeState.multiplier = m.multiplier;
+  saveG();
+  renderHoleCard();
+  updateStandingsBar();
+}
+
+function toggleBirdie(idx) {
+  const b = G.holeState.birdies;
+  const i = b.indexOf(idx);
+  if (i === -1) b.push(idx); else b.splice(i, 1);
+  const m = calcMultiplier();
+  G.holeState.multiplier = m.multiplier;
+  saveG();
+  renderHoleCard();
+}
+
+function toggleHammer(idx) {
+  const h = G.holeState.hammers;
+  const i = h.indexOf(idx);
+  if (i === -1) h.push(idx); else h.splice(i, 1);
+  const m = calcMultiplier();
+  G.holeState.multiplier = m.multiplier;
+  saveG();
+  renderHoleCard();
+}
+
+function selectWinner(team) {
+  G.holeState.winnerTeam = G.holeState.winnerTeam === team ? null : team;
+  saveG();
+  renderHoleCard();
+}
+
+function updateChaseBet(val) {
+  const hs = G.holeState;
+  const standings = getStandings();
+  const loser = standings[0];
+  const maxBet = Math.min(200, Math.abs(loser.balance) / 2);
+  const parsed = parseFloat(val) || G.baseBet;
+  hs.chaseBetInput = Math.min(parsed, maxBet);
+  saveG();
+  renderHoleCard();
+}
+
+// ─────────────────────────────────────
+//  NAV
+// ─────────────────────────────────────
+function switchTab(tab) {
+  document.querySelectorAll('.gtab').forEach((t,i) => t.classList.toggle('active', ['play','history'][i] === tab));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-'+tab).classList.add('active');
+  if (tab === 'history') renderHistory();
+}
+
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(name).classList.add('active');
+  window.scrollTo(0,0);
+}
+
+function endGame() {
+  if (G.holes.length === 0 || !confirm('End the game and see final settlement?')) return;
+  clearSave();
+  renderSettlement();
+  showScreen('settlement');
+}
+
+function newGame() {
+  G = null;
+  clearSave();
+  showScreen('setup');
+}
+
+// ─────────────────────────────────────
+//  SETTLEMENT
+// ─────────────────────────────────────
+function renderSettlement() {
+  const sorted = [...G.players].map((p,i)=>({...p,idx:i})).sort((a,b)=>b.balance-a.balance);
+
+  document.getElementById('settlementCards').innerHTML = sorted.map((p,rank) => {
+    const sign = p.balance >= 0 ? '+' : '';
+    const medal = rank===0?'🏆':rank===1?'🥈':rank===2?'🥉':'';
+    return `<div class="settle-player">
+      <div class="settle-left">
+        <div class="settle-avatar" style="background:${p.color}">${p.label}</div>
+        <div>
+          <div class="settle-name">${medal} ${p.name}</div>
+          <div class="settle-detail">${G.holes.length} holes played</div>
+        </div>
+      </div>
+      <div class="settle-amount ${p.balance>=0?'pos':'neg'}">${sign}$${Math.abs(p.balance).toFixed(2)}</div>
+    </div>`;
+  }).join('');
+
+  // Calculate transfers (who pays who)
+  const transfers = calcTransfers();
+  const transfersEl = document.getElementById('settlementTransfers');
+  if (transfers.length) {
+    transfersEl.innerHTML = `
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:1rem;letter-spacing:0.1em;color:var(--gold-dim);margin-bottom:0.5rem;padding:0 0.5rem">SETTLE UP</div>
+      ${transfers.map(t => `
+        <div class="transfer-row">
+          <div class="po-avatar" style="width:24px;height:24px;background:${G.players[t.from].color};font-size:0.7rem;flex-shrink:0;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800">${G.players[t.from].label}</div>
+          <div style="flex:1"><strong>${G.players[t.from].name}</strong> pays</div>
+          <div class="transfer-arrow">→</div>
+          <div class="po-avatar" style="width:24px;height:24px;background:${G.players[t.to].color};font-size:0.7rem;flex-shrink:0;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800">${G.players[t.to].label}</div>
+          <div><strong>${G.players[t.to].name}</strong></div>
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;color:var(--gold);margin-left:0.5rem">$${t.amount.toFixed(2)}</div>
+        </div>`).join('')}`;
+  } else {
+    transfersEl.innerHTML = '';
+  }
+}
+
+function calcTransfers() {
+  // Minimum transactions to settle all debts
+  const balances = G.players.map((p,i) => ({ idx:i, amount: p.balance }));
+  const debtors  = balances.filter(b => b.amount < 0).sort((a,b)=>a.amount-b.amount);
+  const creditors= balances.filter(b => b.amount > 0).sort((a,b)=>b.amount-a.amount);
+  const transfers = [];
+  let di=0, ci=0;
+  const d = debtors.map(b=>({...b}));
+  const c = creditors.map(b=>({...b}));
+  while (di < d.length && ci < c.length) {
+    const pay = Math.min(Math.abs(d[di].amount), c[ci].amount);
+    if (pay > 0.005) transfers.push({ from:d[di].idx, to:c[ci].idx, amount:Math.round(pay*100)/100 });
+    d[di].amount += pay;
+    c[ci].amount -= pay;
+    if (Math.abs(d[di].amount) < 0.005) di++;
+    if (Math.abs(c[ci].amount) < 0.005) ci++;
+  }
+  return transfers;
+}
+</script>
+</body>
+</html>
