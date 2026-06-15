@@ -1737,20 +1737,92 @@ nav { padding: 0.8rem 1rem !important; }
       <div class="ai-mode-panel" id="aiPanel-preround" style="display:none">
         <div class="card" style="border-color:rgba(167,139,250,0.25)">
           <div class="card-title" style="color:#a78bfa">⛳ Pre-Round Briefing</div>
-          <p style="font-size:0.85rem;color:var(--cream-muted);margin-bottom:1rem">Tell your caddie where you're playing and get a personalised game plan based on your tendencies.</p>
-          <div id="aiPreCourseInfo" style="display:none;background:rgba(201,168,76,0.08);border:1px solid rgba(201,168,76,0.2);border-radius:8px;padding:0.65rem 0.9rem;margin-bottom:0.75rem;font-size:0.82rem;color:var(--gold)"></div>
-          <div class="form-group" style="margin-bottom:0.75rem">
-            <label>Course / Conditions</label>
-            <input type="text" id="aiPreCourse" placeholder="e.g. Bethpage Black, windy, firm greens" />
-          </div>
+          <p style="font-size:0.85rem;color:var(--cream-muted);margin-bottom:1.25rem">Set up your round and your caddie will build a personalised game plan using your stats, tendencies, and bag distances.</p>
+
+          <!-- Course -->
           <div class="form-group" style="margin-bottom:1rem">
-            <label>Anything else to factor in?</label>
-            <input type="text" id="aiPreNotes" placeholder="e.g. Playing with my boss, want to play it safe" />
+            <label>Course</label>
+            <div class="course-search-wrap">
+              <input type="text" id="preRoundCourseSearch" placeholder="Search for a course…" autocomplete="off" oninput="onPreRoundCourseInput()" onfocus="onPreRoundCourseInput()" />
+              <div class="course-dropdown" id="preRoundCourseDropdown" style="display:none"></div>
+            </div>
+            <div class="course-search-status" id="preRoundCourseStatus"></div>
           </div>
-          <button class="btn btn-ai" onclick="runPreRound()">🤖 Get My Game Plan</button>
+
+          <!-- Selected course info + tee -->
+          <div id="preRoundCourseInfo" style="display:none;margin-bottom:1rem">
+            <div id="preRoundCourseBanner" style="background:rgba(201,168,76,0.08);border:1px solid rgba(201,168,76,0.2);border-radius:8px;padding:0.65rem 0.9rem;margin-bottom:0.75rem;font-size:0.82rem;color:var(--gold);display:flex;align-items:center;justify-content:space-between;gap:0.5rem">
+              <span id="preRoundCourseName"></span>
+              <span style="font-size:0.72rem;color:var(--cream-muted);cursor:pointer;text-decoration:underline" onclick="clearPreRoundCourse()">Change</span>
+            </div>
+            <label style="font-size:0.75rem;font-weight:600;color:var(--cream-muted);text-transform:uppercase;letter-spacing:0.06em;display:block;margin-bottom:0.4rem">Tee Box</label>
+            <div class="tee-selector" id="preRoundTeePills"></div>
+          </div>
+
+          <!-- Or manual course name if no search result -->
+          <div id="preRoundManualCourse" style="display:none;margin-bottom:1rem">
+            <input type="text" id="preRoundManualName" placeholder="Course name (e.g. Pebble Beach)" />
+          </div>
+
+          <!-- Time of Day -->
+          <div style="margin-bottom:1rem">
+            <label style="font-size:0.75rem;font-weight:600;color:var(--cream-muted);text-transform:uppercase;letter-spacing:0.06em;display:block;margin-bottom:0.5rem">Tee Time</label>
+            <div style="display:flex;gap:0.4rem;flex-wrap:wrap" id="preRoundTimePills">
+              <div class="cond-pill" data-field="tee_time" data-val="early morning (6–8am)" onclick="togglePreRoundPill(this,'preRoundTimePills')">🌅 Early Morning</div>
+              <div class="cond-pill" data-field="tee_time" data-val="mid morning (8–11am)" onclick="togglePreRoundPill(this,'preRoundTimePills')">☀️ Mid Morning</div>
+              <div class="cond-pill" data-field="tee_time" data-val="midday (11am–1pm)" onclick="togglePreRoundPill(this,'preRoundTimePills')">🔆 Midday</div>
+              <div class="cond-pill" data-field="tee_time" data-val="afternoon (1–4pm)" onclick="togglePreRoundPill(this,'preRoundTimePills')">⛅ Afternoon</div>
+              <div class="cond-pill" data-field="tee_time" data-val="late afternoon / twilight" onclick="togglePreRoundPill(this,'preRoundTimePills')">🌇 Twilight</div>
+            </div>
+          </div>
+
+          <!-- Weather -->
+          <div style="margin-bottom:1rem">
+            <label style="font-size:0.75rem;font-weight:600;color:var(--cream-muted);text-transform:uppercase;letter-spacing:0.06em;display:block;margin-bottom:0.5rem">Weather</label>
+            <div style="display:flex;gap:0.4rem;flex-wrap:wrap" id="preRoundWeatherPills">
+              <div class="cond-pill" data-field="weather" data-val="sunny" onclick="togglePreRoundPill(this,'preRoundWeatherPills')">☀️ Sunny</div>
+              <div class="cond-pill" data-field="weather" data-val="cloudy" onclick="togglePreRoundPill(this,'preRoundWeatherPills')">⛅ Cloudy</div>
+              <div class="cond-pill" data-field="weather" data-val="windy" onclick="togglePreRoundPill(this,'preRoundWeatherPills')">💨 Windy</div>
+              <div class="cond-pill" data-field="weather" data-val="rainy / drizzle" onclick="togglePreRoundPill(this,'preRoundWeatherPills')">🌧️ Rainy</div>
+              <div class="cond-pill" data-field="weather" data-val="cold" onclick="togglePreRoundPill(this,'preRoundWeatherPills')">🥶 Cold</div>
+              <div class="cond-pill" data-field="weather" data-val="hot and humid" onclick="togglePreRoundPill(this,'preRoundWeatherPills')">🔥 Hot</div>
+            </div>
+          </div>
+
+          <!-- Course Conditions -->
+          <div style="margin-bottom:1rem">
+            <label style="font-size:0.75rem;font-weight:600;color:var(--cream-muted);text-transform:uppercase;letter-spacing:0.06em;display:block;margin-bottom:0.5rem">Course Conditions</label>
+            <div style="display:flex;gap:0.4rem;flex-wrap:wrap" id="preRoundCondPills">
+              <div class="cond-pill" data-field="conditions" data-val="dry and firm" onclick="togglePreRoundPill(this,'preRoundCondPills')">🟡 Dry & Firm</div>
+              <div class="cond-pill" data-field="conditions" data-val="soft and wet" onclick="togglePreRoundPill(this,'preRoundCondPills')">💧 Soft & Wet</div>
+              <div class="cond-pill" data-field="conditions" data-val="lush and slow" onclick="togglePreRoundPill(this,'preRoundCondPills')">🟢 Lush</div>
+              <div class="cond-pill" data-field="conditions" data-val="hard and fast" onclick="togglePreRoundPill(this,'preRoundCondPills')">⚡ Hard & Fast</div>
+              <div class="cond-pill" data-field="conditions" data-val="morning dew on greens" onclick="togglePreRoundPill(this,'preRoundCondPills')">🌿 Dewy Greens</div>
+            </div>
+          </div>
+
+          <!-- Stakes / Pressure -->
+          <div style="margin-bottom:1rem">
+            <label style="font-size:0.75rem;font-weight:600;color:var(--cream-muted);text-transform:uppercase;letter-spacing:0.06em;display:block;margin-bottom:0.5rem">Round Type</label>
+            <div style="display:flex;gap:0.4rem;flex-wrap:wrap" id="preRoundStakesPills">
+              <div class="cond-pill" data-field="stakes" data-val="casual / fun round" onclick="togglePreRoundPill(this,'preRoundStakesPills')">😊 Casual</div>
+              <div class="cond-pill" data-field="stakes" data-val="competitive / money match" onclick="togglePreRoundPill(this,'preRoundStakesPills')">💰 Money Match</div>
+              <div class="cond-pill" data-field="stakes" data-val="tournament / stroke play" onclick="togglePreRoundPill(this,'preRoundStakesPills')">🏆 Tournament</div>
+              <div class="cond-pill" data-field="stakes" data-val="practice round" onclick="togglePreRoundPill(this,'preRoundStakesPills')">🎯 Practice</div>
+              <div class="cond-pill" data-field="stakes" data-val="playing with boss / client — need to impress" onclick="togglePreRoundPill(this,'preRoundStakesPills')">💼 Client / Boss</div>
+            </div>
+          </div>
+
+          <!-- Extras -->
+          <div class="form-group" style="margin-bottom:1.25rem">
+            <label>Anything else to factor in?</label>
+            <input type="text" id="preRoundExtras" placeholder="e.g. haven't played in 3 weeks, back is a little stiff, want to focus on tempo…" />
+          </div>
+
+          <button class="btn btn-ai" style="width:100%;justify-content:center" onclick="runPreRound()">🤖 Get My Game Plan</button>
         </div>
         <div id="aiPreRoundOutput" style="display:none"></div>
-        <div id="aiPreRoundActions" style="display:none;display:flex;gap:0.75rem;flex-wrap:wrap;justify-content:flex-end;margin-top:0.5rem">
+        <div id="aiPreRoundActions" style="display:none;gap:0.75rem;flex-wrap:wrap;justify-content:flex-end;margin-top:0.5rem">
           <button class="btn btn-outline btn-sm" onclick="downloadDebrief('preround')">⬇️ Download Briefing</button>
           <button class="btn btn-outline btn-sm" onclick="printDebrief('preround')">🖨️ Print Briefing</button>
         </div>
@@ -1983,7 +2055,10 @@ function initApp() {
   buildScorecard();
   // Course search click-outside
   document.addEventListener('click', e => {
-    if (!e.target.closest('.course-search-wrap')) closeDropdown();
+    if (!e.target.closest('.course-search-wrap')) {
+      closeDropdown();
+      document.getElementById('preRoundCourseDropdown').style.display = 'none';
+    }
   });
   // Photo drag-drop
   const drop = document.getElementById('photoDrop');
@@ -4310,89 +4385,228 @@ function askSuggested(el) {
   sendChatMessage();
 }
 
-// ── Populate pre-round course info banner from selected course ──
-function populatePreRoundCourseInfo() {
-  const banner = document.getElementById('aiPreCourseInfo');
-  const input  = document.getElementById('aiPreCourse');
-  if (!banner || !input) return;
+// ── PRE-ROUND state ──
+let _preRoundCourse = null;   // selected course object
+let _preRoundTee    = null;   // selected tee object
+const _preRoundPills = {};    // field -> value map
 
-  if (selectedCourse) {
-    const name = selectedCourse.club_name || selectedCourse.course_name || '';
-    const tee  = selectedTee ? selectedTee.tee_name : null;
-    const slope = selectedTee?.slope_rating || null;
-    const rating = selectedTee?.course_rating || null;
-    banner.style.display = 'block';
-    banner.innerHTML = `⛳ Auto-filled from your round setup: <strong>${esc(name)}</strong>${tee ? ' · ' + esc(tee) + ' tees' : ''}${slope ? ' · Slope ' + slope : ''}${rating ? ' · Rating ' + rating : ''}`;
-    // Pre-fill the text box if it's empty
-    if (!input.value.trim()) {
-      input.value = name + (tee ? ', ' + tee + ' tees' : '');
-    }
+function togglePreRoundPill(pill, groupId) {
+  const field = pill.dataset.field;
+  const val   = pill.dataset.val;
+  // Single-select within group
+  document.querySelectorAll(`#${groupId} .cond-pill`).forEach(p => p.classList.remove('selected'));
+  // Toggle off if already selected
+  if (_preRoundPills[field] === val) {
+    delete _preRoundPills[field];
   } else {
-    banner.style.display = 'none';
+    pill.classList.add('selected');
+    _preRoundPills[field] = val;
   }
 }
 
-// ── Build full course context string for pre-round prompt ──
-function buildPreRoundCourseContext() {
-  if (!selectedCourse) return null;
+// ── Pre-round course search (mirrors Play tab but separate state) ──
+let _preRoundSearchTimeout = null;
+let _preRoundSearchQuery   = '';
 
-  const name  = selectedCourse.club_name || selectedCourse.course_name || 'Unknown Course';
-  const tee   = selectedTee?.tee_name || null;
-  const slope = selectedTee?.slope_rating || null;
-  const rating = selectedTee?.course_rating || null;
+function onPreRoundCourseInput() {
+  const q = document.getElementById('preRoundCourseSearch').value.trim();
+  if (q === _preRoundSearchQuery) return;
+  _preRoundSearchQuery = q;
+  clearTimeout(_preRoundSearchTimeout);
+  const dd = document.getElementById('preRoundCourseDropdown');
+  const st = document.getElementById('preRoundCourseStatus');
+  if (q.length < 3) { dd.style.display = 'none'; st.textContent = ''; return; }
+  st.className = 'course-search-status loading';
+  st.innerHTML = '<span class="spinner"></span> Searching…';
+  _preRoundSearchTimeout = setTimeout(() => searchPreRoundCourse(q), 450);
+}
 
-  let courseStr = `Course: ${name}`;
-  if (tee)    courseStr += `\nTee Box: ${tee}`;
-  if (slope)  courseStr += `\nSlope Rating: ${slope}`;
-  if (rating) courseStr += `\nCourse Rating: ${rating}`;
-
-  // Hole-by-hole data if available
-  if (selectedTee?.holes?.length) {
-    courseStr += '\n\nHole Data:';
-    selectedTee.holes.forEach(h => {
-      courseStr += `\n  Hole ${h.hole_number}: Par ${h.par}${h.yardage ? ', ' + h.yardage + ' yds' : ''}${h.handicap ? ', SI ' + h.handicap : ''}`;
-    });
-    const totalPar = selectedTee.holes.reduce((s,h) => s + (h.par||0), 0);
-    const totalYards = selectedTee.holes.reduce((s,h) => s + (h.yardage||0), 0);
-    courseStr += `\nTotal: Par ${totalPar}${totalYards ? ', ' + totalYards + ' yds' : ''}`;
+async function searchPreRoundCourse(q) {
+  const cache = getCourseCache();
+  const key = 'search:' + q.toLowerCase();
+  const dd = document.getElementById('preRoundCourseDropdown');
+  const st = document.getElementById('preRoundCourseStatus');
+  let courses = cache[key];
+  if (!courses) {
+    try {
+      const r = await fetch(`${GOLF_API_BASE}/search?search_query=${encodeURIComponent(q)}`, { headers: { 'Authorization': 'Key ' + GOLF_API_KEY } });
+      if (!r.ok) throw new Error(r.status);
+      const d = await r.json();
+      courses = d.courses || [];
+      cache[key] = courses; saveCourseCache(cache);
+    } catch(e) { st.className = 'course-search-status error'; st.textContent = 'Search failed'; return; }
   }
+  st.className = 'course-search-status'; st.textContent = courses.length ? `${courses.length} found` : 'No courses found';
+  if (!courses.length) { dd.style.display = 'none'; return; }
+  dd.style.display = 'block';
+  dd.innerHTML = courses.slice(0, 8).map((c, i) => {
+    const name = c.club_name || c.course_name || 'Unknown';
+    const loc  = [c.city, c.state_name || c.country].filter(Boolean).join(', ');
+    return `<div class="course-option" onclick="selectPreRoundCourse(${i},${JSON.stringify(courses.slice(0,8)).replace(/"/g,'&quot;')})">
+      <div class="co-name">${esc(name)}</div>
+      <div class="co-meta">${esc(loc)}</div>
+    </div>`;
+  }).join('');
+}
 
-  return courseStr;
+async function selectPreRoundCourse(idx, courses) {
+  const c = courses[idx];
+  document.getElementById('preRoundCourseDropdown').style.display = 'none';
+  document.getElementById('preRoundCourseSearch').value = c.club_name || c.course_name || '';
+  document.getElementById('preRoundCourseStatus').textContent = '';
+
+  // Load full course details
+  const st = document.getElementById('preRoundCourseStatus');
+  st.className = 'course-search-status loading';
+  st.innerHTML = '<span class="spinner"></span> Loading course…';
+  try {
+    const cache = getCourseCache();
+    const key = 'detail:' + c.id;
+    let detail = cache[key];
+    if (!detail) {
+      const r = await fetch(`${GOLF_API_BASE}/courses/${c.id}`, { headers: { 'Authorization': 'Key ' + GOLF_API_KEY } });
+      if (!r.ok) throw new Error(r.status);
+      detail = (await r.json()).course || c;
+      cache[key] = detail; saveCourseCache(cache);
+    }
+    _preRoundCourse = detail;
+    _preRoundTee = null;
+    st.className = 'course-search-status success'; st.textContent = '✓ Course loaded';
+    setTimeout(() => st.textContent = '', 3000);
+    renderPreRoundCourseInfo();
+  } catch(e) {
+    st.className = 'course-search-status error'; st.textContent = 'Could not load course details';
+    _preRoundCourse = c;
+    renderPreRoundCourseInfo();
+  }
+}
+
+function renderPreRoundCourseInfo() {
+  const c = _preRoundCourse;
+  if (!c) return;
+  const name = c.club_name || c.course_name || 'Unknown Course';
+  document.getElementById('preRoundCourseName').textContent = '⛳ ' + name;
+  document.getElementById('preRoundCourseInfo').style.display = 'block';
+  document.getElementById('preRoundManualCourse').style.display = 'none';
+
+  // Build tee pills
+  const allTees = [...(c.tees?.male||[]).map(t=>({...t,gender:'Male'})), ...(c.tees?.female||[]).map(t=>({...t,gender:'Female'}))];
+  const pillsEl = document.getElementById('preRoundTeePills');
+  if (allTees.length) {
+    pillsEl.innerHTML = allTees.map((t, i) => {
+      const sub = [t.course_rating ? `${t.course_rating}/${t.slope_rating}` : '', t.total_yards ? `${t.total_yards}y` : ''].filter(Boolean).join(' · ');
+      return `<div class="tee-pill${i===0?' selected':''}" data-idx="${i}" onclick="selectPreRoundTee(this,${i})">${esc(t.tee_name||'Unknown')}${sub?`<br><span style='font-size:0.68rem;font-weight:400;opacity:0.8'>${sub}</span>`:''}</div>`;
+    }).join('');
+    _preRoundTee = allTees[0];
+  } else {
+    pillsEl.innerHTML = '<span style="font-size:0.8rem;color:var(--cream-muted)">No tee data available</span>';
+  }
+}
+
+function selectPreRoundTee(pill, idx) {
+  document.querySelectorAll('#preRoundTeePills .tee-pill').forEach(p => p.classList.remove('selected'));
+  pill.classList.add('selected');
+  const c = _preRoundCourse;
+  const allTees = [...(c?.tees?.male||[]).map(t=>({...t,gender:'Male'})), ...(c?.tees?.female||[]).map(t=>({...t,gender:'Female'}))];
+  _preRoundTee = allTees[idx] || null;
+}
+
+function clearPreRoundCourse() {
+  _preRoundCourse = null; _preRoundTee = null;
+  document.getElementById('preRoundCourseSearch').value = '';
+  document.getElementById('preRoundCourseInfo').style.display = 'none';
+  document.getElementById('preRoundManualCourse').style.display = 'block';
+  document.getElementById('preRoundCourseStatus').textContent = '';
+}
+
+function populatePreRoundCourseInfo() {
+  // If Play tab already has a course selected, pre-fill it
+  if (selectedCourse && !_preRoundCourse) {
+    _preRoundCourse = selectedCourse;
+    _preRoundTee    = selectedTee;
+    document.getElementById('preRoundCourseSearch').value = selectedCourse.club_name || selectedCourse.course_name || '';
+    renderPreRoundCourseInfo();
+    // Re-select correct tee if already chosen
+    if (selectedTee) {
+      const allTees = [...(selectedCourse.tees?.male||[]).map(t=>({...t,gender:'Male'})), ...(selectedCourse.tees?.female||[]).map(t=>({...t,gender:'Female'}))];
+      const idx = allTees.findIndex(t => t.tee_name === selectedTee.tee_name);
+      if (idx >= 0) {
+        const pills = document.querySelectorAll('#preRoundTeePills .tee-pill');
+        pills.forEach(p => p.classList.remove('selected'));
+        if (pills[idx]) pills[idx].classList.add('selected');
+      }
+    }
+  }
+  if (!_preRoundCourse) {
+    document.getElementById('preRoundManualCourse').style.display = 'block';
+  }
+}
+
+// ── Build full course context for AI prompt ──
+function buildPreRoundCourseContext() {
+  const c = _preRoundCourse;
+  if (!c) return null;
+  const name   = c.club_name || c.course_name || 'Unknown Course';
+  const tee    = _preRoundTee?.tee_name || null;
+  const slope  = _preRoundTee?.slope_rating || null;
+  const rating = _preRoundTee?.course_rating || null;
+
+  let str = `Course: ${name}`;
+  if (tee)    str += `\nTee Box: ${tee}`;
+  if (slope)  str += `\nSlope Rating: ${slope}`;
+  if (rating) str += `\nCourse Rating: ${rating}`;
+
+  if (_preRoundTee?.holes?.length) {
+    str += '\n\nHole Data:';
+    _preRoundTee.holes.forEach(h => {
+      str += `\n  Hole ${h.hole_number}: Par ${h.par}${h.yardage ? ', ' + h.yardage + ' yds' : ''}${h.handicap ? ', SI ' + h.handicap : ''}`;
+    });
+    const totalPar   = _preRoundTee.holes.reduce((s,h) => s+(h.par||0), 0);
+    const totalYards = _preRoundTee.holes.reduce((s,h) => s+(h.yardage||0), 0);
+    str += `\nTotal: Par ${totalPar}${totalYards ? ', ' + totalYards + ' yds' : ''}`;
+  }
+  return str;
 }
 
 // ── PRE-ROUND ──
 async function runPreRound() {
-  const course = document.getElementById('aiPreCourse').value.trim();
-  const notes  = document.getElementById('aiPreNotes').value.trim();
-  if (!course) { showToast('Tell your caddie where you\'re playing'); return; }
+  const manualName = document.getElementById('preRoundManualName')?.value?.trim();
+  const courseName = _preRoundCourse
+    ? (_preRoundCourse.club_name || _preRoundCourse.course_name)
+    : manualName;
+
+  if (!courseName) { showToast('Tell your caddie where you\'re playing'); return; }
 
   const courseContext = buildPreRoundCourseContext();
+  const teeTime   = _preRoundPills['tee_time']   || null;
+  const weather   = _preRoundPills['weather']     || null;
+  const conditions= _preRoundPills['conditions']  || null;
+  const stakes    = _preRoundPills['stakes']      || null;
+  const extras    = document.getElementById('preRoundExtras')?.value?.trim() || null;
 
-  const prompt = `I'm about to play a round. Please give me a personalised pre-round game plan.
+  const prompt = `I'm about to tee off. Give me a detailed, personalised pre-round game plan.
 
-${courseContext ? courseContext : 'Course / Conditions: ' + course}
-${!courseContext ? '' : 'Additional context: ' + course}
-${notes ? 'Extra notes: ' + notes : ''}
+${courseContext || 'Course: ' + courseName}
+${teeTime    ? 'Tee Time: ' + teeTime : ''}
+${weather    ? 'Weather: ' + weather : ''}
+${conditions ? 'Course Conditions: ' + conditions : ''}
+${stakes     ? 'Round Type: ' + stakes : ''}
+${extras     ? 'Additional notes: ' + extras : ''}
 
 Structure your briefing with:
 ### 🏌️ Tee Strategy
 ### 🎯 Approach Play
 ### ⛳ Around the Greens
 ### 🧠 Mental Game Plan
+### 🎒 Club Adjustments for Today
 
-Be specific to my tendencies, stats, and bag distances. Call out any specific holes if you have the hole data. Tell me what to watch out for and how to play to my strengths today.`;
+Be hyper-specific to my actual stats, typical miss, and bag distances. Factor in the weather and conditions when recommending clubs and strategy. If you have hole-by-hole data, call out the key holes. Tell me exactly what to do differently today based on conditions.`;
 
-  const outputEl = document.getElementById('aiPreRoundOutput');
+  const outputEl  = document.getElementById('aiPreRoundOutput');
   const actionsEl = document.getElementById('aiPreRoundActions');
   if (actionsEl) actionsEl.style.display = 'none';
   const text = await callCaddieStreaming([{ role:'user', content: prompt }], outputEl);
   if (text && actionsEl) actionsEl.style.display = 'flex';
-}
-
-// ── Print / Download AI output ──
-function getAiOutputText(mode) {
-  const el = document.getElementById(mode === 'debrief' ? 'aiDebriefOutput' : 'aiPreRoundOutput');
-  return el ? el.innerHTML : '';
 }
 
 function getAiOutputTitle(mode) {
@@ -4401,7 +4615,9 @@ function getAiOutputTitle(mode) {
     const sel = picker?.options[picker.selectedIndex]?.text || 'Round';
     return 'Round Debrief — ' + sel;
   }
-  const course = document.getElementById('aiPreCourse')?.value?.trim() || 'Pre-Round Briefing';
+  const course = _preRoundCourse
+    ? (_preRoundCourse.club_name || _preRoundCourse.course_name)
+    : (document.getElementById('preRoundManualName')?.value?.trim() || 'Pre-Round Briefing');
   return 'Pre-Round Briefing — ' + course;
 }
 
