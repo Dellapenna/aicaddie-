@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+<title>⚔️ Match Play — Stakes Play</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,700;1,400&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --felt:#0a1f14;--blue:#2980b9;--blue-light:#6ea8f7;--blue-dim:#1a4a6b;
+  --gold:#d4a843;--cream:#f5f0e6;--cream-muted:#a89a7c;
+  --red:#c0392b;--red-light:#e74c3c;--green:#27ae60;
+  --border:rgba(58,123,213,0.25);--card:rgba(255,255,255,0.04);
+}
+body{font-family:'Inter',sans-serif;background:radial-gradient(ellipse at 50% 0%,#0a1525,var(--felt) 65%);color:var(--cream);min-height:100vh;}
+.screen{display:none;}.screen.active{display:block;}
+
+/* SETUP */
+#setup{padding:2rem 1rem;}
+.back-link{display:block;max-width:540px;margin:0 auto 1rem;font-size:0.78rem;color:var(--cream-muted);text-decoration:none;}
+.back-link:hover{color:var(--blue-light);}
+.logo{text-align:center;padding:1.5rem 0 1rem;}
+.logo-title{font-family:'Bebas Neue',sans-serif;font-size:3.5rem;letter-spacing:0.12em;color:var(--blue-light);text-shadow:0 0 30px rgba(110,168,247,0.3);line-height:1;}
+.logo-sub{font-family:'Playfair Display',serif;font-style:italic;color:var(--cream-muted);}
+.sc{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:1.4rem;max-width:540px;margin:0 auto 1.1rem;}
+.st{font-family:'Bebas Neue',sans-serif;font-size:1.2rem;letter-spacing:0.1em;color:var(--blue-light);margin-bottom:0.9rem;}
+.fl{font-size:0.72rem;font-weight:700;color:var(--cream-muted);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.35rem;display:block;}
+.fi{width:100%;background:rgba(0,0,0,0.3);border:1px solid var(--border);color:var(--cream);padding:0.6rem 0.85rem;border-radius:8px;font-size:0.92rem;font-family:'Inter',sans-serif;}
+.fi:focus{outline:none;border-color:var(--blue-light);}
+.frow{display:flex;gap:0.75rem;flex-wrap:wrap;margin-bottom:0.85rem;}
+.fg{flex:1;min-width:120px;display:flex;flex-direction:column;}
+.tr{display:flex;align-items:center;justify-content:space-between;padding:0.65rem 0;border-bottom:1px solid rgba(255,255,255,0.06);}
+.tr:last-child{border-bottom:none;}
+.tl{font-size:0.86rem;}.ts{font-size:0.72rem;color:var(--cream-muted);}
+.tog{position:relative;width:42px;height:22px;flex-shrink:0;}
+.tog input{opacity:0;width:0;height:0;}
+.tog-s{position:absolute;inset:0;background:rgba(255,255,255,0.1);border-radius:22px;cursor:pointer;transition:0.3s;}
+.tog-s::before{content:'';position:absolute;width:16px;height:16px;left:3px;top:3px;background:#fff;border-radius:50%;transition:0.3s;}
+.tog input:checked+.tog-s{background:var(--blue);}
+.tog input:checked+.tog-s::before{transform:translateX(20px);}
+
+/* TEAM BUILDER */
+.team-builder{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:0.75rem;}
+.team-col{background:rgba(0,0,0,0.2);border-radius:10px;padding:0.85rem;}
+.team-col-title{font-family:'Bebas Neue',sans-serif;font-size:1rem;letter-spacing:0.08em;margin-bottom:0.6rem;}
+.team-a .team-col-title{color:var(--blue-light);}
+.team-b .team-col-title{color:#f87171;}
+.team-input{display:flex;flex-direction:column;gap:0.4rem;}
+.ti-row{display:flex;align-items:center;gap:0.5rem;}
+.ti-dot{width:20px;height:20px;border-radius:50%;flex-shrink:0;}
+
+.btn-start{width:100%;max-width:540px;display:block;margin:0 auto;padding:1rem;background:linear-gradient(135deg,var(--blue),var(--blue-light));color:#fff;font-family:'Bebas Neue',sans-serif;font-size:1.5rem;letter-spacing:0.12em;border:none;border-radius:12px;cursor:pointer;margin-top:0.75rem;}
+.btn-start:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(41,128,185,0.35);}
+
+/* MATCH HEADER */
+.match-header{background:rgba(0,0,0,0.3);border-bottom:1px solid var(--border);padding:1rem 1.25rem;display:flex;align-items:center;justify-content:space-between;}
+.team-score{text-align:center;flex:1;}
+.ts-name{font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--cream-muted);margin-bottom:0.2rem;}
+.ts-val{font-family:'Bebas Neue',sans-serif;font-size:2.5rem;line-height:1;letter-spacing:0.05em;}
+.ts-val.a{color:var(--blue-light);}
+.ts-val.b{color:#f87171;}
+.match-status{text-align:center;flex:0 0 120px;}
+.ms-label{font-family:'Bebas Neue',sans-serif;font-size:0.95rem;letter-spacing:0.1em;color:var(--gold);}
+.ms-holes{font-size:0.72rem;color:var(--cream-muted);}
+
+.gnav{display:flex;align-items:center;justify-content:space-between;padding:0.7rem 1.25rem;background:rgba(0,0,0,0.25);border-bottom:1px solid rgba(255,255,255,0.06);position:sticky;top:0;z-index:50;}
+.gnt{font-family:'Bebas Neue',sans-serif;font-size:1.3rem;letter-spacing:0.1em;color:var(--blue-light);}
+.gns{font-size:0.75rem;color:var(--cream-muted);}
+.btn-end{background:none;border:1px solid rgba(255,255,255,0.15);color:var(--cream-muted);padding:0.3rem 0.75rem;border-radius:6px;font-size:0.78rem;cursor:pointer;font-family:'Inter',sans-serif;}
+
+.gtabs{display:flex;background:rgba(0,0,0,0.3);border-bottom:1px solid var(--border);}
+.gtab{flex:1;padding:0.65rem;text-align:center;font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--cream-muted);cursor:pointer;border-bottom:2px solid transparent;}
+.gtab.active{color:var(--blue-light);border-bottom-color:var(--blue-light);}
+.tab-panel{display:none;}.tab-panel.active{display:block;}
+
+.hole-card{max-width:560px;margin:1.1rem auto;padding:0 1rem;}
+.hh{text-align:center;margin-bottom:1rem;}
+.hbadge{font-family:'Bebas Neue',sans-serif;font-size:0.85rem;letter-spacing:0.18em;color:var(--cream-muted);}
+.hnum{font-family:'Bebas Neue',sans-serif;font-size:5.5rem;color:var(--blue-light);line-height:0.9;text-shadow:0 0 40px rgba(110,168,247,0.25);}
+.hpar{font-size:0.85rem;color:var(--cream-muted);margin-top:0.3rem;}
+
+.team-section{background:var(--card);border-radius:12px;padding:1rem;margin-bottom:0.75rem;}
+.team-section.a{border:1px solid rgba(110,168,247,0.3);}
+.team-section.b{border:1px solid rgba(248,113,113,0.3);}
+.ts-header{font-family:'Bebas Neue',sans-serif;font-size:1rem;letter-spacing:0.08em;margin-bottom:0.75rem;}
+.ts-header.a{color:var(--blue-light);}
+.ts-header.b{color:#f87171;}
+.psr{display:flex;align-items:center;justify-content:space-between;padding:0.55rem 0;border-bottom:1px solid rgba(255,255,255,0.05);}
+.psr:last-child{border-bottom:none;}
+.psr-l{display:flex;align-items:center;gap:0.6rem;}
+.psr-av{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:0.78rem;color:#fff;flex-shrink:0;}
+.psr-name{font-weight:600;font-size:0.85rem;}
+.stepper{display:flex;align-items:center;gap:0.45rem;}
+.s-btn{width:34px;height:34px;border-radius:50%;border:none;font-size:1rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent;}
+.s-minus{background:rgba(255,255,255,0.08);color:var(--cream);}
+.s-plus-a{background:var(--blue);color:#fff;}
+.s-plus-b{background:#e74c3c;color:#fff;}
+.s-val{font-family:'Bebas Neue',sans-serif;font-size:1.5rem;min-width:26px;text-align:center;line-height:1;}
+
+.winner-section{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1rem;margin-bottom:0.75rem;}
+.winner-opt{display:flex;align-items:center;justify-content:space-between;padding:0.7rem 0.85rem;background:rgba(0,0,0,0.2);border:2px solid var(--border);border-radius:10px;cursor:pointer;margin-bottom:0.5rem;-webkit-tap-highlight-color:transparent;}
+.winner-opt:last-child{margin-bottom:0;}
+.winner-opt.sel-a{border-color:var(--blue-light);background:rgba(110,168,247,0.1);}
+.winner-opt.sel-b{border-color:#f87171;background:rgba(248,113,113,0.1);}
+.winner-opt.sel-h{border-color:var(--gold);background:rgba(212,168,67,0.1);}
+.wo-check{width:20px;height:20px;border-radius:50%;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:0.75rem;}
+.winner-opt.sel-a .wo-check{background:var(--blue-light);border-color:var(--blue-light);color:#fff;}
+.winner-opt.sel-b .wo-check{background:#f87171;border-color:#f87171;color:#fff;}
+.winner-opt.sel-h .wo-check{background:var(--gold);border-color:var(--gold);color:#fff;}
+
+.btn-confirm{width:100%;padding:0.95rem;background:linear-gradient(135deg,var(--blue),var(--blue-light));color:#fff;font-family:'Bebas Neue',sans-serif;font-size:1.4rem;letter-spacing:0.1em;border:none;border-radius:10px;cursor:pointer;margin-top:0.5rem;}
+.btn-confirm:disabled{opacity:0.3;cursor:not-allowed;}
+
+/* HISTORY */
+.hist-wrap{max-width:560px;margin:0 auto;padding:1rem;}
+.hhole{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:0.85rem 1rem;margin-bottom:0.5rem;display:flex;align-items:center;justify-content:space-between;}
+.hh-num{font-family:'Bebas Neue',sans-serif;font-size:0.95rem;letter-spacing:0.08em;color:var(--blue-light);}
+.hh-result{font-size:0.82rem;font-weight:600;}
+.hh-result.a{color:var(--blue-light);}
+.hh-result.b{color:#f87171;}
+.hh-result.h{color:var(--gold);}
+.hh-status{font-size:0.75rem;color:var(--cream-muted);}
+
+/* SETTLEMENT */
+#settlement{background:radial-gradient(ellipse at 50% 0%,#0a1525,var(--felt) 60%);min-height:100vh;padding:2rem 1rem;text-align:center;}
+.settle-title{font-family:'Bebas Neue',sans-serif;font-size:3rem;letter-spacing:0.12em;color:var(--blue-light);margin-bottom:0.25rem;}
+.settle-sub{font-family:'Playfair Display',serif;font-style:italic;color:var(--cream-muted);margin-bottom:2rem;}
+.winner-banner{background:linear-gradient(135deg,rgba(41,128,185,0.2),rgba(110,168,247,0.1));border:1px solid rgba(110,168,247,0.4);border-radius:14px;padding:1.5rem;max-width:460px;margin:0 auto 1rem;}
+.wb-winner{font-family:'Bebas Neue',sans-serif;font-size:2.5rem;letter-spacing:0.1em;color:var(--blue-light);}
+.wb-sub{font-size:0.85rem;color:var(--cream-muted);margin-top:0.25rem;}
+.nassau-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:1.2rem;max-width:460px;margin:0 auto 1rem;}
+.nassau-row{display:flex;align-items:center;justify-content:space-between;padding:0.65rem 0;border-bottom:1px solid rgba(255,255,255,0.06);}
+.nassau-row:last-child{border-bottom:none;}
+.btn-new{width:100%;max-width:460px;display:block;margin:1.5rem auto 0;padding:1rem;background:linear-gradient(135deg,var(--blue),var(--blue-light));color:#fff;font-family:'Bebas Neue',sans-serif;font-size:1.4rem;letter-spacing:0.12em;border:none;border-radius:12px;cursor:pointer;}
+@media(max-width:400px){.hnum{font-size:4rem;}.ts-val{font-size:2rem;}}
+</style>
+</head>
+<body>
+
+<div id="setup" class="screen active">
+  <div style="max-width:540px;margin:0 auto;padding-top:1.5rem">
+    <a class="back-link" href="index.html">← Back to Games</a>
+  </div>
+  <div class="logo">
+    <div style="font-size:3rem">⚔️</div>
+    <div class="logo-title">MATCH PLAY</div>
+    <div class="logo-sub">Holes not strokes. Every hole a battle.</div>
+  </div>
+
+  <div class="sc">
+    <div class="st">Format</div>
+    <div class="frow">
+      <div class="fg"><label class="fl">Format</label>
+        <select class="fi" id="format" onchange="updateFormat()">
+          <option value="singles">Singles (1v1)</option>
+          <option value="foursomes">Foursomes (2v2)</option>
+          <option value="fourball">Four-Ball (2v2 Best Ball)</option>
+        </select>
+      </div>
+      <div class="fg"><label class="fl">Holes</label>
+        <select class="fi" id="numHoles"><option value="18" selected>18</option><option value="9">9</option></select>
+      </div>
+    </div>
+    <div class="tr">
+      <div><div class="tl">🏌️ Use Handicaps</div><div class="ts">Strokes given on hardest holes</div></div>
+      <label class="tog"><input type="checkbox" id="useHandicap" checked/><span class="tog-s"></span></label>
+    </div>
+    <div class="tr">
+      <div><div class="tl">💰 Nassau Betting</div><div class="ts">Three separate bets: front, back, overall</div></div>
+      <label class="tog"><input type="checkbox" id="nassau"/><span class="tog-s"></span></label>
+    </div>
+    <div id="nassauAmt" style="display:none;margin-top:0.5rem">
+      <label class="fl">Nassau Bet Per Section ($)</label>
+      <input class="fi" type="number" id="nassauBet" value="10" min="1"/>
+    </div>
+  </div>
+
+  <div class="sc">
+    <div class="st">Teams</div>
+    <div class="team-builder">
+      <div class="team-col team-a">
+        <div class="team-col-title">⚔️ Team A</div>
+        <div class="team-input" id="teamAInputs"></div>
+      </div>
+      <div class="team-col team-b">
+        <div class="team-col-title">🛡️ Team B</div>
+        <div class="team-input" id="teamBInputs"></div>
+      </div>
+    </div>
+    <div id="hcpInputs"></div>
+  </div>
+
+  <button class="btn-start" onclick="startGame()">START MATCH</button>
+  <div style="height:2rem"></div>
+</div>
+
+<div id="game" class="screen">
+  <div class="gnav">
+    <div><div class="gnt" id="gnTitle">MATCH PLAY</div><div class="gns" id="gnSub"></div></div>
+    <button class="btn-end" onclick="endGame()">Concede</button>
+  </div>
+  <div class="match-header" id="matchHeader"></div>
+  <div class="gtabs">
+    <div class="gtab active" onclick="switchTab('play')">⚔️ Play</div>
+    <div class="gtab" onclick="switchTab('history')">📋 History</div>
+  </div>
+  <div id="tab-play" class="tab-panel active"><div class="hole-card" id="holeCard"></div></div>
+  <div id="tab-history" class="tab-panel"><div class="hist-wrap" id="histWrap"></div></div>
+</div>
+
+<div id="settlement" class="screen">
+  <div class="settle-title">MATCH OVER</div>
+  <div class="settle-sub">Final result</div>
+  <div id="winnerBanner"></div>
+  <div id="nassauResult"></div>
+  <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:1.2rem;max-width:460px;margin:0 auto 1rem" id="holeByHole"></div>
+  <button class="btn-new" onclick="newGame()">NEW MATCH</button>
+  <div style="height:2rem"></div>
+</div>
+
+<script>
+
+// ─────────────────────────────────────
+//  PERSISTENCE
+// ─────────────────────────────────────
+const SAVE_KEY = 'caddie_game_matchplay';
+function saveG() { try { if (G) localStorage.setItem(SAVE_KEY, JSON.stringify(G)); } catch(e) {} }
+function clearSave() { try { localStorage.removeItem(SAVE_KEY); } catch(e) {} }
+function resumeGame() { showScreen('game'); renderGame(); }
+function discardGame() { G = null; clearSave(); location.reload(); }
+
+const COLORS_A = ['#2980b9','#3498db'];
+const COLORS_B = ['#e74c3c','#c0392b'];
+let G = null;
+
+document.addEventListener('DOMContentLoaded', () => {
+  updateFormat();
+  try {
+    const saved = localStorage.getItem(SAVE_KEY);
+    if (saved) {
+      G = JSON.parse(saved);
+      const b = document.createElement('div');
+      b.style.cssText = 'max-width:540px;margin:0 auto 1rem;background:rgba(41,128,185,0.12);border:1px solid rgba(110,168,247,0.35);border-radius:10px;padding:0.75rem 1rem;display:flex;align-items:center;justify-content:space-between;gap:0.75rem;flex-wrap:wrap;font-size:0.85rem';
+      b.innerHTML = `<span style="color:var(--blue-light)">⚔️ Match in progress — Hole ${G.currentHole} of ${G.numHoles}</span><div style="display:flex;gap:0.5rem"><button onclick="resumeGame()" style="background:var(--blue);color:#fff;border:none;border-radius:6px;padding:0.35rem 0.85rem;font-weight:700;cursor:pointer;font-size:0.8rem">Resume</button><button onclick="discardGame()" style="background:none;border:1px solid rgba(255,255,255,0.15);color:var(--cream-muted);border-radius:6px;padding:0.35rem 0.7rem;cursor:pointer;font-size:0.8rem">Discard</button></div>`;
+      document.getElementById('setup').insertBefore(b, document.getElementById('setup').firstChild);
+    }
+  } catch(e) {}
+});
+
+document.getElementById('nassau').addEventListener('change', function() {
+  document.getElementById('nassauAmt').style.display = this.checked ? 'block' : 'none';
+});
+
+function updateFormat() {
+  const fmt = document.getElementById('format').value;
+  const isSingles = fmt === 'singles';
+  const n = isSingles ? 1 : 2;
+
+  document.getElementById('teamAInputs').innerHTML = Array.from({length:n},(_,i)=>
+    `<div class="ti-row"><div class="ti-dot" style="background:${COLORS_A[i]||COLORS_A[0]}"></div>
+    <input class="fi" id="a${i}" value="${['Alex','Jordan','Sam','Taylor'][i]}" style="flex:1;padding:0.45rem 0.65rem;font-size:0.85rem"/></div>`
+  ).join('');
+
+  document.getElementById('teamBInputs').innerHTML = Array.from({length:n},(_,i)=>
+    `<div class="ti-row"><div class="ti-dot" style="background:${COLORS_B[i]||COLORS_B[0]}"></div>
+    <input class="fi" id="b${i}" value="${['Morgan','Casey','Riley','Drew'][i]}" style="flex:1;padding:0.45rem 0.65rem;font-size:0.85rem"/></div>`
+  ).join('');
+
+  // HCP inputs
+  const all = Array.from({length:n*2},(_,i)=>i<n?`a${i}`:`b${i-n}`);
+  document.getElementById('hcpInputs').innerHTML = `
+    <div style="margin-top:0.75rem"><label class="fl">Handicaps</label>
+    <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
+      ${Array.from({length:n},(_,i)=>`
+        <div style="flex:1;min-width:80px">
+          <div style="font-size:0.7rem;color:#6ea8f7;margin-bottom:0.2rem" id="hcpLabel_a${i}"></div>
+          <input class="fi" type="number" id="hcp_a${i}" value="0" min="0" max="54" style="padding:0.45rem"/>
+        </div>`).join('')}
+      ${Array.from({length:n},(_,i)=>`
+        <div style="flex:1;min-width:80px">
+          <div style="font-size:0.7rem;color:#f87171;margin-bottom:0.2rem" id="hcpLabel_b${i}"></div>
+          <input class="fi" type="number" id="hcp_b${i}" value="0" min="0" max="54" style="padding:0.45rem"/>
+        </div>`).join('')}
+    </div></div>`;
+
+  // Set labels after inputs exist
+  setTimeout(() => {
+    Array.from({length:n},(_,i)=>{
+      const el = document.getElementById(`hcpLabel_a${i}`);
+      const inp = document.getElementById(`a${i}`);
+      if(el && inp) el.textContent = inp.value;
+    });
+    Array.from({length:n},(_,i)=>{
+      const el = document.getElementById(`hcpLabel_b${i}`);
+      const inp = document.getElementById(`b${i}`);
+      if(el && inp) el.textContent = inp.value;
+    });
+  }, 50);
+}
+
+function startGame() {
+  const fmt = document.getElementById('format').value;
+  const n   = fmt === 'singles' ? 1 : 2;
+  const teamA = Array.from({length:n},(_,i)=>({ name: document.getElementById(`a${i}`).value.trim()||`A${i+1}`, hcp: parseInt(document.getElementById(`hcp_a${i}`).value)||0, color: COLORS_A[i]||COLORS_A[0] }));
+  const teamB = Array.from({length:n},(_,i)=>({ name: document.getElementById(`b${i}`).value.trim()||`B${i+1}`, hcp: parseInt(document.getElementById(`hcp_b${i}`).value)||0, color: COLORS_B[i]||COLORS_B[0] }));
+
+  // Handicap differential — give strokes to higher hcp player
+  const avgHcpA = teamA.reduce((s,p)=>s+p.hcp,0)/teamA.length;
+  const avgHcpB = teamB.reduce((s,p)=>s+p.hcp,0)/teamB.length;
+  const hcpDiff = Math.abs(avgHcpA - avgHcpB);
+  const lowerHcpTeam = avgHcpA <= avgHcpB ? 'A' : 'B';
+
+  G = {
+    teamA, teamB, format: fmt,
+    numHoles:    parseInt(document.getElementById('numHoles').value),
+    useHandicap: document.getElementById('useHandicap').checked,
+    nassau:      document.getElementById('nassau').checked,
+    nassauBet:   parseFloat(document.getElementById('nassauBet').value)||10,
+    hcpDiff,     lowerHcpTeam,
+    currentHole: 1,
+    holesWon:    { A:0, B:0, H:0 },
+    holes:       [],
+    holeScores:  {},
+    selectedWinner: null,
+    matchStatus: 'AS', // 'X UP', 'X DN', 'AS', 'OVER'
+    matchWinner: null,
+  };
+  // Init scores
+  [...G.teamA,...G.teamB].forEach((_,i) => G.holeScores[i] = null);
+  saveG();
+  showScreen('game');
+  renderGame();
+}
+
+function getMatchStatusText() {
+  const { A, B } = G.holesWon;
+  const remaining = G.numHoles - G.currentHole + 1;
+  const diff = A - B;
+  if (diff === 0) return 'All Square';
+  const leader = diff > 0 ? 'A' : 'B';
+  const margin = Math.abs(diff);
+  if (margin > remaining) return `${getTeamName(leader)} wins ${margin}&${remaining}`;
+  return `${getTeamName(leader)} ${margin} UP`;
+}
+
+function getTeamName(t) {
+  return t === 'A' ? G.teamA.map(p=>p.name.split(' ')[0]).join('/') : G.teamB.map(p=>p.name.split(' ')[0]).join('/');
+}
+
+function renderGame() {
+  document.getElementById('gnSub').textContent = `Hole ${G.currentHole} of ${G.numHoles}`;
+
+  // Match header
+  const { A, B } = G.holesWon;
+  document.getElementById('matchHeader').innerHTML = `
+    <div class="team-score"><div class="ts-name">${getTeamName('A')}</div><div class="ts-val a">${A}</div></div>
+    <div class="match-status"><div class="ms-label">${getMatchStatusText()}</div><div class="ms-holes">Hole ${G.currentHole}</div></div>
+    <div class="team-score"><div class="ts-name">${getTeamName('B')}</div><div class="ts-val b">${B}</div></div>`;
+
+  renderHoleCard();
+  renderHistory();
+}
+
+function renderHoleCard() {
+  const h = G.currentHole;
+  const par = 4;
+  let html = `<div class="hh"><div class="hbadge">HOLE</div><div class="hnum">${h}</div><div class="hpar">Par ${par}</div></div>`;
+
+  // Team A scores (only for foursomes/fourball)
+  if (G.format !== 'singles' || true) {
+    html += `<div class="team-section a"><div class="ts-header a">${getTeamName('A')}</div>`;
+    G.teamA.forEach((p,i) => {
+      const score = G.holeScores[i];
+      html += playerScoreRow(p, i, score, 'a');
+    });
+    html += `</div>`;
+
+    html += `<div class="team-section b"><div class="ts-header b">${getTeamName('B')}</div>`;
+    G.teamB.forEach((p,i) => {
+      const idx = G.teamA.length + i;
+      const score = G.holeScores[idx];
+      html += playerScoreRow(p, idx, score, 'b');
+    });
+    html += `</div>`;
+  }
+
+  // Winner selection
+  const aName = getTeamName('A'), bName = getTeamName('B');
+  html += `<div class="winner-section">
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:0.95rem;letter-spacing:0.08em;color:rgba(110,168,247,0.6);margin-bottom:0.75rem">Hole Result</div>
+    <div class="winner-opt ${G.selectedWinner==='A'?'sel-a':''}" onclick="selectWinner('A')">
+      <div style="font-weight:700">⚔️ ${aName} wins hole</div><div class="wo-check">${G.selectedWinner==='A'?'✓':''}</div>
+    </div>
+    <div class="winner-opt ${G.selectedWinner==='B'?'sel-b':''}" onclick="selectWinner('B')">
+      <div style="font-weight:700">🛡️ ${bName} wins hole</div><div class="wo-check">${G.selectedWinner==='B'?'✓':''}</div>
+    </div>
+    <div class="winner-opt ${G.selectedWinner==='H'?'sel-h':''}" onclick="selectWinner('H')">
+      <div style="font-weight:700">🤝 Halved</div><div class="wo-check">${G.selectedWinner==='H'?'✓':''}</div>
+    </div>
+  </div>`;
+
+  html += `<button class="btn-confirm" onclick="confirmHole()" ${G.selectedWinner?'':'disabled'}>
+    ${G.currentHole >= G.numHoles ? 'FINISH MATCH ✓' : 'NEXT HOLE →'}
+  </button>`;
+
+  document.getElementById('holeCard').innerHTML = html;
+}
+
+function playerScoreRow(p, idx, score, team) {
+  const plusClass = team === 'a' ? 's-plus-a' : 's-plus-b';
+  return `<div class="psr">
+    <div class="psr-l">
+      <div class="psr-av" style="background:${p.color}">${p.name.charAt(0)}</div>
+      <div class="psr-name">${p.name}</div>
+    </div>
+    <div class="stepper">
+      <button class="s-btn s-minus" onclick="adjScore(${idx},-1)">−</button>
+      <div class="s-val">${score===null?'—':score}</div>
+      <button class="s-btn ${plusClass}" onclick="adjScore(${idx},+1)">+</button>
+    </div>
+  </div>`;
+}
+
+function adjScore(idx, delta) {
+  G.holeScores[idx] = G.holeScores[idx] === null ? (4+delta) : Math.max(1,Math.min(15,G.holeScores[idx]+delta));
+  saveG();
+  renderHoleCard();
+}
+
+function selectWinner(w) {
+  G.selectedWinner = G.selectedWinner === w ? null : w;
+  saveG();
+  renderHoleCard();
+}
+
+function confirmHole() {
+  const w = G.selectedWinner;
+  if (!w) return;
+  G.holesWon[w]++;
+  G.holes.push({ hole: G.currentHole, winner: w, scores: {...G.holeScores} });
+
+  // Check if match is over (can't be caught)
+  const { A, B } = G.holesWon;
+  const remaining = G.numHoles - G.currentHole;
+  if (Math.abs(A-B) > remaining) {
+    G.matchWinner = A > B ? 'A' : 'B';
+    endGame(); return;
+  }
+
+  if (G.currentHole >= G.numHoles) { endGame(); return; }
+  G.currentHole++;
+  G.selectedWinner = null;
+  [...G.teamA,...G.teamB].forEach((_,i) => G.holeScores[i] = null);
+  saveG();
+  renderGame();
+  switchTab('play');
+}
+
+function renderHistory() {
+  const el = document.getElementById('histWrap');
+  if (!G.holes.length) { el.innerHTML = '<div style="text-align:center;padding:3rem;color:var(--cream-muted)">No holes yet.</div>'; return; }
+  const { A, B } = G.holesWon;
+  let runA=0, runB=0;
+  el.innerHTML = [...G.holes].reverse().map(h => {
+    const cls = h.winner==='A'?'a':h.winner==='B'?'b':'h';
+    const label = h.winner==='A'?getTeamName('A')+' wins':h.winner==='B'?getTeamName('B')+' wins':'Halved';
+    return `<div class="hhole">
+      <div class="hh-num">HOLE ${h.hole}</div>
+      <div><div class="hh-result ${cls}">${label}</div></div>
+    </div>`;
+  }).join('');
+}
+
+function endGame() {
+  const { A, B, H } = G.holesWon;
+  const diff = A - B;
+  const winner = diff > 0 ? 'A' : diff < 0 ? 'B' : null;
+  const remaining = G.numHoles - G.holes.length;
+
+  let resultText, resultSub;
+  if (!winner) {
+    resultText = 'ALL SQUARE'; resultSub = 'The match is tied';
+  } else {
+    const margin = Math.abs(diff);
+    resultText = `${getTeamName(winner)} WIN`;
+    resultSub = G.matchWinner ? `${margin}&${remaining} (match ended early)` : `${margin} UP after ${G.holes.length} holes`;
+  }
+
+  document.getElementById('winnerBanner').innerHTML = `
+    <div class="winner-banner" style="border-color:${winner==='A'?'rgba(110,168,247,0.4)':winner==='B'?'rgba(248,113,113,0.4)':'rgba(212,168,67,0.4)'}">
+      <div style="font-size:2rem">${winner==='A'?'⚔️':winner==='B'?'🛡️':'🤝'}</div>
+      <div class="wb-winner" style="color:${winner==='A'?'var(--blue-light)':winner==='B'?'#f87171':'var(--gold)'}">${resultText}</div>
+      <div class="wb-sub">${resultSub}</div>
+      <div style="display:flex;justify-content:center;gap:2rem;margin-top:0.75rem">
+        <div style="text-align:center"><div style="font-family:'Bebas Neue',sans-serif;font-size:1.8rem;color:var(--blue-light)">${A}</div><div style="font-size:0.7rem;color:var(--cream-muted)">${getTeamName('A')}</div></div>
+        <div style="text-align:center;padding-top:0.3rem;font-family:'Bebas Neue',sans-serif;color:var(--cream-muted)">VS</div>
+        <div style="text-align:center"><div style="font-family:'Bebas Neue',sans-serif;font-size:1.8rem;color:#f87171">${B}</div><div style="font-size:0.7rem;color:var(--cream-muted)">${getTeamName('B')}</div></div>
+      </div>
+    </div>`;
+
+  // Nassau result
+  if (G.nassau) {
+    const front = G.holes.slice(0,9);
+    const back  = G.holes.slice(9);
+    const nassauResult = (holes) => {
+      const wa = holes.filter(h=>h.winner==='A').length;
+      const wb = holes.filter(h=>h.winner==='B').length;
+      if (wa > wb) return { winner:'A', label: getTeamName('A') };
+      if (wb > wa) return { winner:'B', label: getTeamName('B') };
+      return { winner:null, label:'Tied' };
+    };
+    const fr = nassauResult(front), br = nassauResult(back), or = nassauResult(G.holes);
+    document.getElementById('nassauResult').innerHTML = `
+      <div class="nassau-card">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:1rem;letter-spacing:0.1em;color:var(--gold);margin-bottom:0.75rem">💰 Nassau Results ($${G.nassauBet} each)</div>
+        ${[['Front 9',fr],['Back 9',br],['Overall',or]].map(([label,r])=>`
+          <div class="nassau-row">
+            <div style="font-weight:600">${label}</div>
+            <div style="font-weight:700;color:${r.winner==='A'?'var(--blue-light)':r.winner==='B'?'#f87171':'var(--gold)'}">${r.label}</div>
+            <div style="color:${r.winner?'var(--green)':'var(--cream-muted)'}">
+              ${r.winner?`+$${G.nassauBet} / -$${G.nassauBet}`:'Push'}
+            </div>
+          </div>`).join('')}
+      </div>`;
+  } else { document.getElementById('nassauResult').innerHTML=''; }
+
+  // Hole by hole summary
+  document.getElementById('holeByHole').innerHTML = `
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:1rem;letter-spacing:0.1em;color:var(--cream-muted);margin-bottom:0.75rem">Hole by Hole</div>
+    ${G.holes.map(h=>`
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:0.4rem 0;border-bottom:1px solid rgba(255,255,255,0.05);font-size:0.82rem">
+        <div style="color:var(--cream-muted)">Hole ${h.hole}</div>
+        <div style="font-weight:700;color:${h.winner==='A'?'var(--blue-light)':h.winner==='B'?'#f87171':'var(--gold)'}">
+          ${h.winner==='A'?getTeamName('A'):h.winner==='B'?getTeamName('B'):'Halved'}
+        </div>
+      </div>`).join('')}`;
+
+  clearSave();
+  showScreen('settlement');
+}
+
+function switchTab(t){
+  document.querySelectorAll('.gtab').forEach((b,i)=>b.classList.toggle('active',['play','history'][i]===t));
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('tab-'+t).classList.add('active');
+  if(t==='history')renderHistory();
+}
+function showScreen(n){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(n).classList.add('active');window.scrollTo(0,0);}
+function newGame(){G=null;clearSave();showScreen('setup');}
+</script>
+</body>
+</html>

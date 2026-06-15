@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+<title>🎯 Stableford — Stakes Play</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,700;1,400&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --felt:#0a1f14;--felt-mid:#0f2d1e;--felt-light:#163d29;
+  --green:#27ae60;--green-light:#6fcf97;--green-dim:#1a6b3a;
+  --gold:#d4a843;--gold-light:#f0c96a;
+  --cream:#f5f0e6;--cream-muted:#a89a7c;
+  --red:#c0392b;--red-light:#e74c3c;
+  --border:rgba(39,174,96,0.25);--card:rgba(255,255,255,0.04);
+}
+body{font-family:'Inter',sans-serif;background:radial-gradient(ellipse at 50% 0%,#0d2e1a 0%,var(--felt) 70%);color:var(--cream);min-height:100vh;}
+
+/* SETUP */
+#setup{padding:2rem 1rem;}
+.logo{text-align:center;padding:1.5rem 0 1rem;}
+.logo-icon{font-size:3rem;}
+.logo-title{font-family:'Bebas Neue',sans-serif;font-size:4rem;letter-spacing:0.15em;color:var(--green-light);line-height:1;text-shadow:0 0 30px rgba(111,207,151,0.3);}
+.logo-sub{font-family:'Playfair Display',serif;font-style:italic;color:var(--cream-muted);font-size:0.95rem;}
+.back-link{display:inline-flex;align-items:center;gap:0.4rem;font-size:0.78rem;color:var(--cream-muted);text-decoration:none;margin-bottom:1rem;}
+.back-link:hover{color:var(--green-light);}
+
+.setup-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:1.4rem;max-width:540px;margin:0 auto 1.1rem;}
+.s-title{font-family:'Bebas Neue',sans-serif;font-size:1.2rem;letter-spacing:0.1em;color:var(--green-light);margin-bottom:0.9rem;}
+.fl{font-size:0.72rem;font-weight:700;color:var(--cream-muted);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.35rem;display:block;}
+.fi{width:100%;background:rgba(0,0,0,0.3);border:1px solid var(--border);color:var(--cream);padding:0.6rem 0.85rem;border-radius:8px;font-size:0.92rem;font-family:'Inter',sans-serif;transition:border-color 0.2s;}
+.fi:focus{outline:none;border-color:var(--green);}
+.fi::placeholder{color:var(--cream-muted);}
+.frow{display:flex;gap:0.75rem;flex-wrap:wrap;margin-bottom:0.85rem;}
+.fg{flex:1;min-width:120px;display:flex;flex-direction:column;}
+.player-row{display:flex;align-items:center;gap:0.7rem;margin-bottom:0.5rem;}
+.p-num{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:0.78rem;color:#fff;flex-shrink:0;}
+.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:0.65rem 0;border-bottom:1px solid rgba(255,255,255,0.06);}
+.toggle-row:last-child{border-bottom:none;}
+.tl{font-size:0.86rem;} .ts{font-size:0.72rem;color:var(--cream-muted);}
+.toggle{position:relative;width:42px;height:22px;flex-shrink:0;}
+.toggle input{opacity:0;width:0;height:0;}
+.tslider{position:absolute;inset:0;background:rgba(255,255,255,0.1);border-radius:22px;cursor:pointer;transition:0.3s;}
+.tslider::before{content:'';position:absolute;width:16px;height:16px;left:3px;top:3px;background:#fff;border-radius:50%;transition:0.3s;}
+.toggle input:checked+.tslider{background:var(--green);}
+.toggle input:checked+.tslider::before{transform:translateX(20px);}
+.pts-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:0.5rem;}
+.pts-item{background:rgba(0,0,0,0.2);border:1px solid var(--border);border-radius:8px;padding:0.6rem;text-align:center;}
+.pts-label{font-size:0.7rem;color:var(--cream-muted);text-transform:uppercase;letter-spacing:0.05em;}
+.pts-input{width:100%;background:transparent;border:none;color:var(--green-light);font-size:1.2rem;font-weight:700;text-align:center;font-family:'Inter',sans-serif;}
+.pts-input:focus{outline:none;}
+.btn-start{width:100%;max-width:540px;display:block;margin:0 auto;padding:1rem;background:linear-gradient(135deg,var(--green),var(--green-light));color:#fff;font-family:'Bebas Neue',sans-serif;font-size:1.5rem;letter-spacing:0.12em;border:none;border-radius:12px;cursor:pointer;margin-top:0.75rem;}
+.btn-start:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(39,174,96,0.35);}
+
+/* GAME */
+#game{background:var(--felt);}
+.gnav{display:flex;align-items:center;justify-content:space-between;padding:0.9rem 1.25rem;background:rgba(0,0,0,0.3);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:50;}
+.gnav-title{font-family:'Bebas Neue',sans-serif;font-size:1.4rem;letter-spacing:0.1em;color:var(--green-light);}
+.gnav-sub{font-size:0.78rem;color:var(--cream-muted);}
+.btn-end{background:none;border:1px solid rgba(255,255,255,0.15);color:var(--cream-muted);padding:0.3rem 0.75rem;border-radius:6px;font-size:0.78rem;cursor:pointer;font-family:'Inter',sans-serif;}
+
+.scores-bar{display:flex;overflow-x:auto;background:rgba(0,0,0,0.25);border-bottom:1px solid var(--border);}
+.score-pill{display:flex;flex-direction:column;align-items:center;padding:0.55rem 0.85rem;flex:1;min-width:65px;border-right:1px solid rgba(255,255,255,0.06);}
+.score-pill:last-child{border-right:none;}
+.sp-name{font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:var(--cream-muted);}
+.sp-pts{font-family:'Bebas Neue',sans-serif;font-size:1.2rem;color:var(--green-light);}
+.sp-holes{font-size:0.62rem;color:var(--cream-muted);}
+
+.gtabs{display:flex;background:rgba(0,0,0,0.3);border-bottom:1px solid var(--border);}
+.gtab{flex:1;padding:0.65rem;text-align:center;font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--cream-muted);cursor:pointer;border-bottom:2px solid transparent;transition:all 0.15s;}
+.gtab.active{color:var(--green-light);border-bottom-color:var(--green-light);}
+.tab-panel{display:none;} .tab-panel.active{display:block;}
+
+.hole-card{max-width:580px;margin:1.1rem auto;padding:0 1rem;}
+.hole-header{text-align:center;margin-bottom:1.25rem;}
+.hbadge{font-family:'Bebas Neue',sans-serif;font-size:0.85rem;letter-spacing:0.18em;color:var(--cream-muted);}
+.hnum{font-family:'Bebas Neue',sans-serif;font-size:5.5rem;color:var(--green-light);line-height:0.9;text-shadow:0 0 40px rgba(111,207,151,0.25);}
+.hpar{font-size:0.85rem;color:var(--cream-muted);margin-top:0.3rem;}
+
+.scard{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1rem;margin-bottom:0.85rem;}
+.sc-title{font-family:'Bebas Neue',sans-serif;font-size:0.95rem;letter-spacing:0.08em;color:rgba(111,207,151,0.6);margin-bottom:0.85rem;}
+.player-score-row{display:flex;align-items:center;justify-content:space-between;padding:0.6rem 0;border-bottom:1px solid rgba(255,255,255,0.05);}
+.player-score-row:last-child{border-bottom:none;}
+.psr-left{display:flex;align-items:center;gap:0.6rem;}
+.psr-avatar{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:0.8rem;color:#fff;flex-shrink:0;}
+.psr-name{font-weight:600;font-size:0.88rem;}
+.psr-hcp{font-size:0.7rem;color:var(--cream-muted);}
+.psr-right{display:flex;align-items:center;gap:0.75rem;}
+.score-stepper{display:flex;align-items:center;gap:0.5rem;}
+.ss-btn{width:36px;height:36px;border-radius:50%;border:none;font-size:1.1rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent;transition:all 0.15s;}
+.ss-minus{background:rgba(255,255,255,0.08);color:var(--cream);}
+.ss-minus:active{background:rgba(255,255,255,0.18);}
+.ss-plus{background:var(--green);color:#fff;}
+.ss-plus:active{background:#2ecc71;}
+.ss-val{font-family:'Bebas Neue',sans-serif;font-size:1.6rem;min-width:28px;text-align:center;color:var(--cream);line-height:1;}
+.pts-badge{font-family:'Bebas Neue',sans-serif;font-size:1.1rem;min-width:36px;text-align:right;}
+.pts-badge.eagle{color:#6ea8f7;} .pts-badge.birdie{color:var(--green-light);} .pts-badge.par{color:var(--cream-muted);} .pts-badge.bogey{color:#fca5a5;} .pts-badge.zero{color:#ef4444;}
+
+.btn-next{width:100%;padding:0.95rem;background:linear-gradient(135deg,var(--green),var(--green-light));color:#fff;font-family:'Bebas Neue',sans-serif;font-size:1.4rem;letter-spacing:0.1em;border:none;border-radius:10px;cursor:pointer;margin-top:0.5rem;}
+.btn-next:disabled{opacity:0.3;cursor:not-allowed;}
+
+/* HISTORY */
+.hist-wrap{max-width:580px;margin:0 auto;padding:1rem;}
+.hist-hole{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:0.85rem 1rem;margin-bottom:0.5rem;}
+.hh-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:0.4rem;}
+.hh-num{font-family:'Bebas Neue',sans-serif;font-size:0.95rem;letter-spacing:0.08em;color:var(--green-light);}
+.hh-par{font-size:0.72rem;color:var(--cream-muted);}
+.hh-scores{display:flex;gap:0.4rem;flex-wrap:wrap;}
+.hh-pill{padding:0.18rem 0.55rem;border-radius:20px;font-size:0.72rem;font-weight:700;}
+.hh-pill.good{background:rgba(39,174,96,0.15);color:var(--green-light);border:1px solid rgba(39,174,96,0.3);}
+.hh-pill.bad{background:rgba(192,57,43,0.15);color:#f87171;border:1px solid rgba(192,57,43,0.3);}
+.hh-pill.ok{background:rgba(255,255,255,0.06);color:var(--cream-muted);border:1px solid rgba(255,255,255,0.1);}
+
+/* SETTLEMENT */
+#settlement{background:radial-gradient(ellipse at 50% 0%,#0d2e1a,var(--felt) 60%);min-height:100vh;padding:2rem 1rem;}
+.settle-title{font-family:'Bebas Neue',sans-serif;font-size:3rem;letter-spacing:0.12em;color:var(--green-light);text-align:center;margin-bottom:0.25rem;}
+.settle-sub{text-align:center;font-family:'Playfair Display',serif;font-style:italic;color:var(--cream-muted);margin-bottom:2rem;}
+.settle-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:1.2rem;max-width:480px;margin:0 auto 1rem;}
+.settle-row{display:flex;align-items:center;justify-content:space-between;padding:0.85rem 0;border-bottom:1px solid rgba(255,255,255,0.06);}
+.settle-row:last-child{border-bottom:none;}
+.sr-left{display:flex;align-items:center;gap:0.75rem;}
+.sr-avatar{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1rem;color:#fff;}
+.sr-pts{font-family:'Bebas Neue',sans-serif;font-size:2rem;color:var(--green-light);letter-spacing:0.05em;}
+.btn-new{width:100%;max-width:480px;display:block;margin:1.5rem auto 0;padding:1rem;background:linear-gradient(135deg,var(--green),var(--green-light));color:#fff;font-family:'Bebas Neue',sans-serif;font-size:1.4rem;letter-spacing:0.12em;border:none;border-radius:12px;cursor:pointer;}
+
+.screen{display:none;} .screen.active{display:block;}
+@media(max-width:400px){.hnum{font-size:4rem;}}
+</style>
+</head>
+<body>
+
+<div id="setup" class="screen active">
+  <div style="max-width:540px;margin:0 auto;padding-top:1.5rem">
+    <a class="back-link" href="index.html">← Back to Games</a>
+  </div>
+  <div class="logo">
+    <div class="logo-icon">🎯</div>
+    <div class="logo-title">STABLEFORD</div>
+    <div class="logo-sub">Every hole is a chance to score</div>
+  </div>
+
+  <div class="setup-card">
+    <div class="s-title">Players</div>
+    <div class="frow"><div class="fg"><label class="fl">Number of Players</label>
+      <select class="fi" id="numPlayers" onchange="updatePlayers()">
+        <option value="2">2</option><option value="3">3</option><option value="4" selected>4</option>
+        <option value="5">5</option><option value="6">6</option>
+      </select></div>
+      <div class="fg"><label class="fl">Holes</label>
+        <select class="fi" id="numHoles"><option value="18" selected>18 Holes</option><option value="9">9 Holes</option></select>
+      </div>
+    </div>
+    <div id="playerInputs"></div>
+  </div>
+
+  <div class="setup-card">
+    <div class="s-title">Format</div>
+    <div class="frow">
+      <div class="fg"><label class="fl">Variant</label>
+        <select class="fi" id="variant">
+          <option value="standard">Standard Stableford</option>
+          <option value="modified">Modified (no 0 pts)</option>
+          <option value="team">Team (best ball)</option>
+        </select>
+      </div>
+    </div>
+    <div class="toggle-row">
+      <div><div class="tl">🏌️ Use Handicaps</div><div class="ts">Apply handicap strokes per hole</div></div>
+      <label class="toggle"><input type="checkbox" id="useHandicap" checked/><span class="tslider"></span></label>
+    </div>
+  </div>
+
+  <div class="setup-card">
+    <div class="s-title">Points System</div>
+    <div class="pts-grid">
+      <div class="pts-item"><div class="pts-label">Albatross</div><input class="pts-input" id="pts_albatross" type="number" value="5"/></div>
+      <div class="pts-item"><div class="pts-label">Eagle</div><input class="pts-input" id="pts_eagle" type="number" value="4"/></div>
+      <div class="pts-item"><div class="pts-label">Birdie</div><input class="pts-input" id="pts_birdie" type="number" value="3"/></div>
+      <div class="pts-item"><div class="pts-label">Par</div><input class="pts-input" id="pts_par" type="number" value="2"/></div>
+      <div class="pts-item"><div class="pts-label">Bogey</div><input class="pts-input" id="pts_bogey" type="number" value="1"/></div>
+      <div class="pts-item"><div class="pts-label">Double+</div><input class="pts-input" id="pts_double" type="number" value="0"/></div>
+    </div>
+  </div>
+
+  <button class="btn-start" onclick="startGame()">TEE IT UP</button>
+  <div style="height:2rem"></div>
+</div>
+
+<div id="game" class="screen">
+  <div class="gnav">
+    <div><div class="gnav-title" id="gnTitle">STABLEFORD</div><div class="gnav-sub" id="gnSub"></div></div>
+    <button class="btn-end" onclick="endGame()">Finish</button>
+  </div>
+  <div class="scores-bar" id="scoresBar"></div>
+  <div class="gtabs">
+    <div class="gtab active" onclick="switchTab('play')">🎯 Play</div>
+    <div class="gtab" onclick="switchTab('history')">📋 History</div>
+  </div>
+  <div id="tab-play" class="tab-panel active"><div class="hole-card" id="holeCard"></div></div>
+  <div id="tab-history" class="tab-panel"><div class="hist-wrap" id="histWrap"></div></div>
+</div>
+
+<div id="settlement" class="screen">
+  <div class="settle-title">FINAL SCORES</div>
+  <div class="settle-sub">Stableford complete</div>
+  <div class="settle-card" id="settleCards"></div>
+  <button class="btn-new" onclick="newGame()">NEW GAME</button>
+  <div style="height:2rem"></div>
+</div>
+
+<script>
+
+// ─────────────────────────────────────
+//  PERSISTENCE
+// ─────────────────────────────────────
+const SAVE_KEY = 'caddie_game_stableford';
+function saveG() { try { if (G) localStorage.setItem(SAVE_KEY, JSON.stringify(G)); } catch(e) {} }
+function clearSave() { try { localStorage.removeItem(SAVE_KEY); } catch(e) {} }
+function resumeGame() { showScreen('game'); renderGame(); }
+function discardGame() { G = null; clearSave(); location.reload(); }
+
+const COLORS = ['#27ae60','#3a9bd5','#e74c3c','#9b59b6','#d4a843','#e67e22'];
+let G = null;
+
+document.addEventListener('DOMContentLoaded', () => {
+  updatePlayers();
+  try {
+    const saved = localStorage.getItem(SAVE_KEY);
+    if (saved) {
+      G = JSON.parse(saved);
+      const b = document.createElement('div');
+      b.style.cssText = 'max-width:540px;margin:0 auto 1rem;background:rgba(212,168,67,0.12);border:1px solid rgba(212,168,67,0.35);border-radius:10px;padding:0.75rem 1rem;display:flex;align-items:center;justify-content:space-between;gap:0.75rem;flex-wrap:wrap;font-size:0.85rem';
+      b.innerHTML = `<span style="color:var(--gold)">🎯 Stableford in progress — Hole ${G.currentHole} of ${G.numHoles}</span><div style="display:flex;gap:0.5rem"><button onclick="resumeGame()" style="background:var(--gold);color:var(--felt);border:none;border-radius:6px;padding:0.35rem 0.85rem;font-weight:700;cursor:pointer;font-size:0.8rem">Resume</button><button onclick="discardGame()" style="background:none;border:1px solid rgba(255,255,255,0.15);color:var(--cream-muted);border-radius:6px;padding:0.35rem 0.7rem;cursor:pointer;font-size:0.8rem">Discard</button></div>`;
+      document.getElementById('setup').insertBefore(b, document.getElementById('setup').firstChild);
+    }
+  } catch(e) {}
+});
+
+function updatePlayers() {
+  const n = parseInt(document.getElementById('numPlayers').value);
+  const names = ['Alice','Bob','Carlos','Diana','Eddie','Frank'];
+  document.getElementById('playerInputs').innerHTML = Array.from({length:n},(_,i)=>`
+    <div class="player-row">
+      <div class="p-num" style="background:${COLORS[i]}">${i+1}</div>
+      <input class="fi" id="pname_${i}" placeholder="${names[i]}" value="${names[i]}" style="flex:1"/>
+      <input class="fi" type="number" id="phcp_${i}" placeholder="HCP" value="0" min="0" max="54" style="width:70px"/>
+    </div>`).join('');
+}
+
+function getPoints(score, par) {
+  const diff = score - par;
+  const pts = document.getElementById;
+  if (diff <= -3) return parseInt(pts('pts_albatross').value)||5;
+  if (diff === -2) return parseInt(pts('pts_eagle').value)||4;
+  if (diff === -1) return parseInt(pts('pts_birdie').value)||3;
+  if (diff ===  0) return parseInt(pts('pts_par').value)||2;
+  if (diff ===  1) return parseInt(pts('pts_bogey').value)||1;
+  return parseInt(pts('pts_double').value)||0;
+}
+
+function startGame() {
+  const n = parseInt(document.getElementById('numPlayers').value);
+  G = {
+    players: Array.from({length:n},(_,i)=>({
+      name:    document.getElementById(`pname_${i}`).value.trim()||`P${i+1}`,
+      color:   COLORS[i],
+      hcp:     parseInt(document.getElementById(`phcp_${i}`).value)||0,
+      points:  0,
+      scores:  [],
+    })),
+    numHoles:    parseInt(document.getElementById('numHoles').value),
+    variant:     document.getElementById('variant').value,
+    useHandicap: document.getElementById('useHandicap').checked,
+    pts: {
+      albatross: parseInt(document.getElementById('pts_albatross').value)||5,
+      eagle:     parseInt(document.getElementById('pts_eagle').value)||4,
+      birdie:    parseInt(document.getElementById('pts_birdie').value)||3,
+      par:       parseInt(document.getElementById('pts_par').value)||2,
+      bogey:     parseInt(document.getElementById('pts_bogey').value)||1,
+      double:    parseInt(document.getElementById('pts_double').value)||0,
+    },
+    currentHole: 1,
+    holes: [],
+    holeScores: {}, // current hole input scores
+  };
+  // Init current hole scores to par
+  G.players.forEach((_,i) => G.holeScores[i] = null);
+  saveG();
+  showScreen('game');
+  renderGame();
+}
+
+function renderGame() {
+  document.getElementById('gnSub').textContent = `Hole ${G.currentHole} of ${G.numHoles}`;
+  renderScoresBar();
+  renderHoleCard();
+  renderHistory();
+}
+
+function renderScoresBar() {
+  document.getElementById('scoresBar').innerHTML = G.players.map(p =>
+    `<div class="score-pill">
+      <div class="sp-name">${p.name.split(' ')[0].substring(0,6)}</div>
+      <div class="sp-pts">${p.points}</div>
+      <div class="sp-holes">pts</div>
+    </div>`).join('');
+}
+
+function renderHoleCard() {
+  const h = G.currentHole;
+  const par = 4; // default par — could add per-hole par input
+  let html = `
+    <div class="hole-header">
+      <div class="hbadge">HOLE</div>
+      <div class="hnum">${h}</div>
+      <div class="hpar">Par ${par} · Enter each player's score</div>
+    </div>
+    <div class="scard">
+      <div class="sc-title">Scores</div>
+      <div id="playerScores">`;
+
+  G.players.forEach((p,i) => {
+    const score = G.holeScores[i];
+    const displayScore = score !== null ? score : '—';
+    const pts = score !== null ? calcPointsForPlayer(score, par, p.hcp, h) : null;
+    const ptsClass = pts === null ? '' : pts >= 4 ? 'eagle' : pts === 3 ? 'birdie' : pts === 2 ? 'par' : pts === 1 ? 'bogey' : 'zero';
+    const ptsLabel = pts === null ? '' : `${pts}pt${pts!==1?'s':''}`;
+    html += `
+      <div class="player-score-row">
+        <div class="psr-left">
+          <div class="psr-avatar" style="background:${p.color}">${p.name.charAt(0)}</div>
+          <div>
+            <div class="psr-name">${p.name}</div>
+            <div class="psr-hcp">HCP ${p.hcp}</div>
+          </div>
+        </div>
+        <div class="psr-right">
+          <div class="score-stepper">
+            <button class="ss-btn ss-minus" onclick="adjScore(${i},-1)">−</button>
+            <div class="ss-val">${displayScore}</div>
+            <button class="ss-btn ss-plus" onclick="adjScore(${i},+1)">+</button>
+          </div>
+          <div class="pts-badge ${ptsClass}">${ptsLabel}</div>
+        </div>
+      </div>`;
+  });
+  html += `</div></div>`;
+
+  const allEntered = G.players.every((_,i) => G.holeScores[i] !== null);
+  const isLast = G.currentHole >= G.numHoles;
+  html += `<button class="btn-next" onclick="confirmHole()" ${allEntered?'':'disabled'}>
+    ${isLast ? 'FINISH ROUND ✓' : `NEXT HOLE →`}
+  </button>`;
+
+  document.getElementById('holeCard').innerHTML = html;
+}
+
+function calcPointsForPlayer(score, par, hcp, hole) {
+  let adjustedPar = par;
+  if (G.useHandicap) {
+    // Simple: give strokes on lowest SI holes up to handicap
+    // Since we don't have SI per hole, distribute evenly
+    const strokesOnHole = Math.floor(hcp/18) + (hole <= (hcp%18) ? 1 : 0);
+    adjustedPar += strokesOnHole;
+  }
+  return getPoints(score, adjustedPar);
+}
+
+function adjScore(playerIdx, delta) {
+  const current = G.holeScores[playerIdx];
+  if (current === null) {
+    G.holeScores[playerIdx] = 4 + delta; // start at par-ish
+  } else {
+    G.holeScores[playerIdx] = Math.max(1, Math.min(15, current + delta));
+  }
+  saveG();
+  renderHoleCard();
+}
+
+function confirmHole() {
+  const h = G.currentHole;
+  const par = 4;
+  const holeResult = { hole: h, par, scores: {}, points: {} };
+  G.players.forEach((p,i) => {
+    const score = G.holeScores[i];
+    const pts = calcPointsForPlayer(score, par, p.hcp, h);
+    p.points += pts;
+    p.scores.push(score);
+    holeResult.scores[i] = score;
+    holeResult.points[i] = pts;
+  });
+  G.holes.push(holeResult);
+
+  if (G.currentHole >= G.numHoles) { endGame(); return; }
+  saveG();
+  G.currentHole++;
+  G.players.forEach((_,i) => G.holeScores[i] = null);
+  renderGame();
+  switchTab('play');
+}
+
+function renderHistory() {
+  const el = document.getElementById('histWrap');
+  if (!G.holes.length) { el.innerHTML = '<div style="text-align:center;padding:3rem;color:var(--cream-muted)">No holes yet.</div>'; return; }
+  el.innerHTML = [...G.holes].reverse().map(h => `
+    <div class="hist-hole">
+      <div class="hh-header">
+        <div class="hh-num">HOLE ${h.hole}</div>
+        <div class="hh-par">Par ${h.par}</div>
+      </div>
+      <div class="hh-scores">
+        ${G.players.map((p,i) => {
+          const pts = h.points[i];
+          const cls = pts >= 3 ? 'good' : pts === 2 ? 'ok' : pts <= 1 ? 'bad' : 'ok';
+          return `<span class="hh-pill ${cls}">${p.name.split(' ')[0]}: ${h.scores[i]} (${pts}pt${pts!==1?'s':''})</span>`;
+        }).join('')}
+      </div>
+    </div>`).join('');
+}
+
+function endGame() {
+  const sorted = [...G.players].map((p,i)=>({...p,idx:i})).sort((a,b)=>b.points-a.points);
+  const medals = ['🏆','🥈','🥉'];
+  document.getElementById('settleCards').innerHTML = sorted.map((p,rank) => `
+    <div class="settle-row">
+      <div class="sr-left">
+        <div class="sr-avatar" style="background:${p.color}">${p.name.charAt(0)}</div>
+        <div>
+          <div style="font-weight:700">${medals[rank]||''} ${p.name}</div>
+          <div style="font-size:0.75rem;color:var(--cream-muted)">${G.holes.length} holes · avg ${G.holes.length?(p.points/G.holes.length).toFixed(1):0} pts/hole</div>
+        </div>
+      </div>
+      <div class="sr-pts">${p.points} <span style="font-size:0.9rem">pts</span></div>
+    </div>`).join('');
+  showScreen('settlement');
+}
+
+function switchTab(t) {
+  document.querySelectorAll('.gtab').forEach((b,i)=>b.classList.toggle('active',['play','history'][i]===t));
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('tab-'+t).classList.add('active');
+  if(t==='history')renderHistory();
+}
+function showScreen(n){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(n).classList.add('active');window.scrollTo(0,0);}
+function newGame(){G=null;clearSave();showScreen('setup');}
+</script>
+</body>
+</html>
