@@ -1957,7 +1957,7 @@ function initApp() {
   // Load data
   setNavStatus('loading');
   loadAll()
-    .then(() => { setNavStatus('live'); startRealtime(); checkSharedProfile(); })
+    .then(() => { setNavStatus('live'); startRealtime(); checkSharedProfile(); lsCheckResume(); })
     .catch(e => { setNavStatus('error'); showToast('⚠️ Could not connect to database'); console.error(e); });
 }
 
@@ -2511,6 +2511,7 @@ function showPage(name,btn){
   if(name==='profile')renderProfilePage();
   if(name==='admin')loadAdminData();
   if(name==='ai'){ switchAiMode('debrief'); }
+  if(name==='new-round'){ lsCheckResume(); }
   if(name!=='new-round') stopQrScan();
 }
 
@@ -2852,6 +2853,13 @@ function clearScorecard(){
 // ─────────────────────────────────────
 function launchLiveScore(){
   if(selectedGolfers.length===0){showToast('Select at least one golfer first!');return;}
+  // Warn if a round is already in progress
+  const existing = (() => { try { return localStorage.getItem('caddie_ls_active'); } catch(e) { return null; } })();
+  if (existing) {
+    const saved = JSON.parse(existing);
+    const holesScored = saved?.golfers?.[0]?.holes?.filter(h => h.score !== null).length || 0;
+    if (holesScored > 0 && !confirm(`You have a round in progress at ${saved.course} (${holesScored} holes scored). Start a new round and discard it?`)) return;
+  }
   const golfer=selectedGolfers[0];
   const n=parseInt(document.getElementById('holesCount').value);
   const tee=selectedTee?(selectedTee.tee_name||'Unknown'):document.getElementById('teeColor').value;
@@ -2870,6 +2878,7 @@ function launchLiveScore(){
   };
   // legacy compat
   ls.golfer=selectedGolfers[0]; ls.holes=ls.golfers[0].holes;
+  lsPersist();
 
   document.getElementById('lsTitle').textContent=selectedGolfers.length>1?'Group Round':selectedGolfers[0];
   document.getElementById('lsCourse').textContent=courseName+' · '+n+' holes';
@@ -2879,11 +2888,71 @@ function launchLiveScore(){
   lsRenderHole();
 }
 
+// ── localStorage persistence for live scoring ──
+function lsPersist() {
+  try { localStorage.setItem('caddie_ls_active', JSON.stringify(ls)); } catch(e) {}
+}
+function lsClearPersist() {
+  try { localStorage.removeItem('caddie_ls_active'); } catch(e) {}
+}
+function lsCheckResume() {
+  try {
+    const raw = localStorage.getItem('caddie_ls_active');
+    if (!raw) return;
+    const saved = JSON.parse(raw);
+    if (!saved || !saved.golfers || !saved.totalHoles) return;
+    // Show resume banner
+    const holesScored = saved.golfers[0]?.holes?.filter(h => h.score !== null).length || 0;
+    if (holesScored === 0) { lsClearPersist(); return; }
+    let banner = document.getElementById('lsResumeBanner');
+    if (!banner) {
+      banner = document.createElement('div');
+      banner.id = 'lsResumeBanner';
+      banner.style.cssText = 'background:rgba(201,168,76,0.12);border:1px solid rgba(201,168,76,0.4);border-radius:10px;padding:0.85rem 1rem;margin-bottom:1.25rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.6rem;';
+      const page = document.getElementById('page-new-round');
+      page && page.insertBefore(banner, page.firstChild);
+    }
+    banner.innerHTML = `
+      <div>
+        <div style="font-weight:700;font-size:0.92rem;color:var(--gold)">⛳ Round In Progress</div>
+        <div style="font-size:0.78rem;color:var(--cream-muted);margin-top:0.15rem">${esc(saved.course)} · Hole ${holesScored + 1} of ${saved.totalHoles}</div>
+      </div>
+      <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
+        <button class="btn btn-gold btn-sm" onclick="lsResume()">▶ Resume</button>
+        <button class="btn btn-outline btn-sm" onclick="lsDiscardSaved()">✕ Discard</button>
+      </div>`;
+    banner.style.display = 'flex';
+  } catch(e) {}
+}
+function lsResume() {
+  try {
+    const raw = localStorage.getItem('caddie_ls_active');
+    if (!raw) return;
+    ls = JSON.parse(raw);
+    document.getElementById('lsTitle').textContent = ls.golfers.length > 1 ? 'Group Round' : ls.golfers[0].name;
+    document.getElementById('lsCourse').textContent = ls.course + ' · ' + ls.totalHoles + ' holes';
+    document.getElementById('liveScoreOverlay').classList.add('open');
+    document.body.style.overflow = 'hidden';
+    renderLsGolferSwitcher();
+    lsRenderHole();
+    document.getElementById('lsHoleView').style.display = 'flex';
+    document.getElementById('lsSummaryView').style.display = 'none';
+  } catch(e) { showToast('Could not resume round'); }
+}
+function lsDiscardSaved() {
+  if (!confirm('Discard the in-progress round?')) return;
+  lsClearPersist();
+  const banner = document.getElementById('lsResumeBanner');
+  if (banner) banner.style.display = 'none';
+}
+
 function closeLiveScore(){
   document.getElementById('liveScoreOverlay').classList.remove('open');
   document.body.style.overflow='';
   document.getElementById('lsHoleView').style.display='flex';
   document.getElementById('lsSummaryView').style.display='none';
+  // Keep progress in localStorage so user can resume
+  lsCheckResume();
 }
 
 function lsSwitchGolfer(idx) {
@@ -2892,6 +2961,7 @@ function lsSwitchGolfer(idx) {
   ls.golfer = ls.golfers[idx].name;
   renderLsGolferSwitcher();
   lsRenderHole();
+  lsPersist();
 }
 function renderLsGolferSwitcher() {
   const sw = document.getElementById('lsGolferSwitcher');
@@ -2937,17 +3007,20 @@ function lsAdj(field,delta){
   }
   if(field==='putts') h.putts=Math.max(0,Math.min(9,(h.putts||0)+delta));
   lsRenderHole();
+  lsPersist();
 }
 
 function lsToggleBeer(){
   ls.holes[ls.current].beer=!ls.holes[ls.current].beer;
   lsRenderHole();
+  lsPersist();
 }
 
 function lsNav(dir){
   if(dir===1&&ls.current===ls.totalHoles-1){lsShowSummary();return;}
   ls.current=Math.max(0,Math.min(ls.totalHoles-1,ls.current+dir));
   lsRenderHole();
+  lsPersist();
 }
 
 function lsShowSummary(){
@@ -2997,6 +3070,9 @@ async function lsSaveRound(){
       groupId:ls.groupId, notes, weather, conditions
     });
   }
+  lsClearPersist();
+  const banner = document.getElementById('lsResumeBanner');
+  if (banner) banner.style.display = 'none';
   closeLiveScore();
   clearScorecard();
   selectedGolfers=[];selectedWeather='';selectedConditions='';
@@ -3635,18 +3711,53 @@ function removeBagClub(idx) {
 
 async function saveBag() {
   if (!_currentUser) return;
+  const btn = document.querySelector('[onclick="saveBag()"]');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Saving…'; }
   try {
     const token = await getAuthToken();
-    const hdrs = { ...SB_HDR, 'Authorization': 'Bearer ' + token };
-    // Delete all existing then re-insert
-    await fetch(`${SB_URL}/rest/v1/bag_clubs?user_id=eq.${_currentUser.id}`, { method:'DELETE', headers: hdrs });
+    const hdrs = {
+      ...SB_HDR,
+      'Authorization': 'Bearer ' + token,
+      'Content-Type': 'application/json',
+    };
+
+    // Step 1: delete existing clubs for this user
+    const delRes = await fetch(
+      `${SB_URL}/rest/v1/bag_clubs?user_id=eq.${_currentUser.id}`,
+      { method: 'DELETE', headers: hdrs }
+    );
+    if (!delRes.ok && delRes.status !== 404) {
+      const errText = await delRes.text();
+      console.error('Bag delete failed:', delRes.status, errText);
+      throw new Error(`Delete failed: ${delRes.status}`);
+    }
+
+    // Step 2: re-insert if there are clubs
     if (_bagClubs.length) {
-      const rows = _bagClubs.map((c,i) => ({ ...c, user_id: _currentUser.id, sort_order: i, id: undefined }));
-      const ins = await fetch(`${SB_URL}/rest/v1/bag_clubs`, { method:'POST', headers: { ...hdrs, 'Prefer':'return=representation' }, body: JSON.stringify(rows) });
-      if (ins.ok) _bagClubs = await ins.json();
+      const rows = _bagClubs.map((c, i) => {
+        const row = { ...c, user_id: _currentUser.id, sort_order: i };
+        delete row.id; // let Supabase generate new IDs
+        return row;
+      });
+      const insRes = await fetch(
+        `${SB_URL}/rest/v1/bag_clubs`,
+        { method: 'POST', headers: { ...hdrs, 'Prefer': 'return=representation' }, body: JSON.stringify(rows) }
+      );
+      if (!insRes.ok) {
+        const errText = await insRes.text();
+        console.error('Bag insert failed:', insRes.status, errText);
+        throw new Error(`Insert failed: ${insRes.status}`);
+      }
+      _bagClubs = await insRes.json();
+      renderBagRows();
     }
     showToast('✅ Bag saved!');
-  } catch(e) { showToast('❌ Could not save bag'); console.error(e); }
+  } catch(e) {
+    showToast('❌ Could not save bag — check console for details');
+    console.error('saveBag error:', e);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '💾 Save Bag'; }
+  }
 }
 
 // ── PLAYING STYLE ──
