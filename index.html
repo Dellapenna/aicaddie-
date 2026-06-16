@@ -3252,11 +3252,12 @@ async function sbGet(t,p=''){
 }
 async function sbInsert(t,row){
   const token = await getAuthToken();
-  const hdrs = {...SB_HDR, 'Authorization':'Bearer '+token, 'Content-Type':'application/json', 'Prefer':'return=minimal'};
+  const hdrs = {...SB_HDR, 'Authorization':'Bearer '+token, 'Content-Type':'application/json'};
   if((t==='rounds'||t==='golfers')&&_currentUser&&!row.user_id) row={...row,user_id:_currentUser.id};
   const r=await fetch(`${SB_URL}/rest/v1/${t}`,{method:'POST',headers:hdrs,body:JSON.stringify(row)});
   if(!r.ok){const errText=await r.text();console.error('sbInsert failed:',r.status,errText);throw new Error(errText);}
-  return r.status===204?null:r.json();
+  const text = await r.text();
+  return text ? JSON.parse(text) : null;
 }
 async function sbDelete(t,id){
   const token = await getAuthToken();
