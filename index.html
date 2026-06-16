@@ -3172,7 +3172,14 @@ Structure the plan exactly like this:
 ### 📅 Next Session Focus
 (One sentence on what to prioritise next time based on today's work.)
 
-Be extremely specific. Reference their actual stats. Name the drills. Give exact rep counts and targets. Write this like a PGA teaching pro who has studied their game data.`;
+Be extremely specific. Reference their actual stats. Name the drills. Give exact rep counts and targets. Write this like a PGA teaching pro who has studied their game data.
+
+Writing style rules — follow these strictly:
+- Short sentences. No fluff. No filler phrases.
+- State the problem, state the fix, state the drill. That's it.
+- Never write: "you may want to", "it's important to", "consider", "perhaps"
+- Drill instructions: setup in 1 sentence, what to do in 1-2 sentences, rep count, success target. Done.
+- If a stat is good, mention it in 5 words and move on.`;
 
   const outputEl  = document.getElementById('aiRangeOutput');
   const actionsEl = document.getElementById('aiRangeActions');
@@ -3537,7 +3544,7 @@ async function runSwingAnalysis() {
     `Club: ${_swingClub}`, `Angle: ${_swingAngle}`,
   ].filter(Boolean).join('\n');
 
-  contentBlocks.push({ type:'text', text:`You are a PGA teaching pro analysing a golf swing. Frames: Address, Takeaway, Top, Impact, Follow-Through from ${_swingAngle} angle.\n\nGOLFER:\n${golferCtx}${poseCtx}\n\n### 🏌️ Setup & Address\n### 🔄 Backswing\n### ⚡ Impact & Through-Swing\n### 🎯 Top 2 Priority Fixes\n(Reference pose scores — lowest areas need most work)\n### 🏋️ Drill for Each Fix\n\nBe specific and reference what you see in the frames.` });
+  contentBlocks.push({ type:'text', text:`You are a PGA teaching pro analysing a golf swing. Frames: Address, Takeaway, Top, Impact, Follow-Through from ${_swingAngle} angle.\n\nGOLFER:\n${golferCtx}${poseCtx}\n\n### 🏌️ Setup & Address\n### 🔄 Backswing\n### ⚡ Impact & Through-Swing\n### 🎯 Top 2 Priority Fixes\n(Reference pose scores — lowest areas need most work)\n### 🏋️ Drill for Each Fix\n\nWriting style rules — follow these strictly:\n- Short sentences. Direct observations only. No filler.\n- State what you see, then state the fix. No hedging.\n- Never write: "it appears", "you may want to", "consider", "perhaps"\n- Priority fixes: one clear action each. "Drop your right shoulder 2 inches at address." Not "You might benefit from adjusting your shoulder position."\n- Drills: name, setup in 1 sentence, execution in 1-2 sentences, reps, success metric. Done.\n- If the camera angle limits visibility, say so in one sentence and move on.` });
 
   const outputEl  = document.getElementById('aiSwingOutput');
   const actionsEl = document.getElementById('aiSwingActions');
@@ -5818,7 +5825,14 @@ function buildCaddieContext() {
     ? _bagClubs.filter(c=>c.carry_yards).map(c=>`${c.club_type}${c.brand?' ('+c.brand+')':''}: ${c.carry_yards}yds`).join(', ')
     : 'Not set up yet';
 
-  return `You are an expert golf caddie and coach named "The Caddie" for the Caddie Club app. You know this golfer intimately. Speak like a knowledgeable, encouraging caddie — direct, specific, and practical. No generic advice. Always reference their actual stats.
+  return `You are an expert golf caddie and coach named "The Caddie" for the Caddie Club app. You know this golfer intimately. Speak like a no-nonsense tour caddie — direct, blunt, specific. No generic advice. Always reference their actual stats.
+
+COMMUNICATION STYLE — follow these rules in every response:
+- Short sentences. One idea per sentence.
+- State the problem, state the fix. Don't pad it out.
+- Never use: "it's important to", "you may want to", "consider", "perhaps", "it would be beneficial", "it appears that"
+- If something is good, say it in one sentence. Spend your words on problems and fixes.
+- Specific numbers always beat vague observations. "You're averaging 36 putts" beats "your putting has room for improvement."
 
 GOLFER PROFILE:
 - Name: ${name}
@@ -5980,7 +5994,14 @@ Structure your debrief with these sections:
 ### 🔴 Where Shots Were Lost
 ### 🎯 One Thing To Focus On Next Time
 
-Keep it specific to my actual numbers and my known tendencies. Be a real caddie, not a generic coach.`;
+Keep it specific to my actual numbers and my known tendencies. Be a real caddie, not a generic coach.
+
+Writing style rules — follow these strictly:
+- Short sentences. Direct observations. No filler.
+- Never write: "it's important to", "you may want to", "consider", "perhaps", "it would be beneficial"
+- Start observations with what you see: "Your putts cost you X shots." not "It appears that putting may have been a factor."
+- Every fix must be a single clear action: "Shorten your backswing by 20%." not "Working on your backswing length could help."
+- If something is good, say it in one sentence and move on. Spend words on problems and fixes.`;
 
   const outputEl = document.getElementById('aiDebriefOutput');
   const actionsEl = document.getElementById('aiDebriefActions');
@@ -6286,7 +6307,14 @@ Structure your briefing with:
 ### 🧠 Mental Game Plan
 ### 🎒 Club Adjustments for Today
 
-Be hyper-specific to my actual stats, typical miss, and bag distances. Factor in the weather and conditions when recommending clubs and strategy. If you have hole-by-hole data, call out the key holes. Tell me exactly what to do differently today based on conditions.`;
+Be hyper-specific to my actual stats, typical miss, and bag distances. Factor in the weather and conditions when recommending clubs and strategy. If you have hole-by-hole data, call out the key holes. Tell me exactly what to do differently today based on conditions.
+
+Writing style rules — follow these strictly:
+- Short sentences. One idea per sentence. No hedging.
+- Never write: "you may want to", "consider", "perhaps", "it could be beneficial"
+- Club recommendations: "Take 7 iron, aim 10 yards left." Not "You might want to consider taking a 7 iron."
+- Strategy: "Lay up to 100 yards on hole 5. Driver will find the bunker." Direct. Specific.
+- Mental notes: one sentence max per point.`;
 
   const outputEl  = document.getElementById('aiPreRoundOutput');
   const actionsEl = document.getElementById('aiPreRoundActions');
