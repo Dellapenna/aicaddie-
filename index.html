@@ -7393,17 +7393,34 @@ Rules:
 - Only return the JSON object, nothing else.`;
 
   try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
+    const res = await fetch('/api/caddie', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         model: 'claude-sonnet-4-6',
         max_tokens: 300,
+        stream: true,
         messages: [{ role: 'user', content: prompt }]
       })
     });
-    const data = await res.json();
-    const raw = data.content?.[0]?.text || '';
+
+    if (!res.ok) throw new Error('API error ' + res.status);
+
+    // Collect streamed text
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let raw = '';
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      const lines = decoder.decode(value).split('\n').filter(l => l.startsWith('data: '));
+      for (const line of lines) {
+        try {
+          const d = JSON.parse(line.slice(6));
+          if (d.type === 'content_block_delta' && d.delta?.text) raw += d.delta.text;
+        } catch(e) {}
+      }
+    }
     const parsed = JSON.parse(raw.match(/\{[\s\S]*\}/)?.[0] || '{}');
 
     // Apply parsed values to current hole
