@@ -128,6 +128,18 @@ table.scorecard { width:100%; border-collapse:collapse; font-size:0.82rem; }
 .ls-extra-btn.on-haz  { border-color:#f59e0b; color:#f59e0b; background:rgba(245,158,11,0.1); }
 .ls-extra-btn.on-fairway { border-color:#60a5fa; color:#60a5fa; background:rgba(96,165,250,0.1); }
 .ls-extra-btn.on-scratch { border-color:#f87171; color:#f87171; background:rgba(248,113,113,0.1); }
+/* Voice input */
+.voice-btn { background:none; border:1px solid var(--border); border-radius:50%; width:38px; height:38px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:1rem; transition:all 0.2s; flex-shrink:0; }
+.voice-btn:hover { border-color:var(--gold); }
+.voice-btn.listening { border-color:#f87171; background:rgba(248,113,113,0.12); animation:voicePulse 1s infinite; }
+.voice-btn.processing { border-color:var(--gold); background:rgba(201,168,76,0.12); }
+@keyframes voicePulse { 0%,100%{box-shadow:0 0 0 0 rgba(248,113,113,0.4)} 50%{box-shadow:0 0 0 8px rgba(248,113,113,0)} }
+.ls-voice-wrap { display:flex; flex-direction:column; align-items:center; margin-bottom:0.75rem; }
+.ls-voice-btn { width:52px; height:52px; border-radius:50%; border:2px solid var(--border); background:rgba(0,0,0,0.2); display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:1.3rem; transition:all 0.2s; }
+.ls-voice-btn:hover { border-color:var(--gold); }
+.ls-voice-btn.listening { border-color:#f87171; background:rgba(248,113,113,0.12); animation:voicePulse 1s infinite; }
+.ls-voice-btn.processing { border-color:#6fcf97; background:rgba(111,207,151,0.12); }
+.ls-voice-transcript { font-size:0.75rem; color:var(--cream-muted); text-align:center; margin-top:0.35rem; font-style:italic; min-height:1.1rem; max-width:260px; line-height:1.4; }
 
 /* SCORE COLORS */
 .score-eagle  { background:#1a4fa0 !important; color:#fff !important; border-radius:50%; }
@@ -859,6 +871,12 @@ nav { padding: 0.8rem 1rem !important; }
     </div>
 
     <button class="ls-beer-btn" id="lsBeerBtn" onclick="lsToggleBeer()">🍺 Beer this hole?</button>
+
+    <!-- Voice entry -->
+    <div class="ls-voice-wrap">
+      <button class="ls-voice-btn" id="lsVoiceBtn" onclick="lsStartVoice()" title="Speak your hole result">🎤</button>
+      <div class="ls-voice-transcript" id="lsVoiceTranscript">Tap to speak your hole result</div>
+    </div>
 
     <div class="ls-extras">
       <button class="ls-extra-btn" id="lsGirBtn" onclick="lsToggleGir()" title="Green in Regulation">
@@ -1990,10 +2008,12 @@ nav { padding: 0.8rem 1rem !important; }
           <div class="card-title" style="color:#a78bfa">💬 Ask Your Caddie</div>
           <p style="font-size:0.85rem;color:var(--cream-muted);margin-bottom:1rem">Ask anything about your game. Your caddie knows your stats, bag, and tendencies.</p>
           <div id="aiChatHistory" style="display:flex;flex-direction:column;gap:0.75rem;margin-bottom:1rem;max-height:400px;overflow-y:auto"></div>
-          <div style="display:flex;gap:0.5rem">
+          <div style="display:flex;gap:0.5rem;align-items:center">
             <input type="text" id="aiChatInput" placeholder="e.g. Why do I struggle on par 5s?" style="flex:1;font-size:0.85rem" onkeydown="if(event.key==='Enter')sendChatMessage()" />
+            <button class="voice-btn" id="chatVoiceBtn" onclick="chatStartVoice()" title="Speak your question">🎤</button>
             <button class="btn btn-ai btn-sm" onclick="sendChatMessage()">Send</button>
           </div>
+          <div class="voice-status" id="chatVoiceStatus"></div>
           <!-- Suggested questions -->
           <div style="margin-top:0.75rem;display:flex;flex-wrap:wrap;gap:0.4rem">
             <div class="ai-suggest" onclick="askSuggested(this)">What's my weakest hole type?</div>
@@ -7271,6 +7291,198 @@ function closeGameOverlay() {
   document.body.style.overflow = '';
   // Refresh the games page badges so "in progress" indicators update
   renderGamesPage();
+}
+
+// ─────────────────────────────────────
+//  VOICE INPUT
+// ─────────────────────────────────────
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+let _recognition = null;
+let _voiceMode = null; // 'ls' or 'chat'
+
+function voiceSupported() {
+  if (!SpeechRecognition) {
+    showToast('Voice input not supported in this browser. Try Chrome.');
+    return false;
+  }
+  return true;
+}
+
+function createRecognition(onResult, onEnd) {
+  if (_recognition) { try { _recognition.stop(); } catch(e) {} }
+  const r = new SpeechRecognition();
+  r.continuous = false;
+  r.interimResults = true;
+  r.lang = 'en-US';
+  r.onresult = onResult;
+  r.onend = onEnd;
+  r.onerror = e => {
+    console.warn('Speech error:', e.error);
+    onEnd();
+  };
+  _recognition = r;
+  return r;
+}
+
+// ── Live Scoring Voice ──
+function lsStartVoice() {
+  if (!voiceSupported()) return;
+  const btn = document.getElementById('lsVoiceBtn');
+  const transcript = document.getElementById('lsVoiceTranscript');
+
+  if (btn.classList.contains('listening')) {
+    _recognition?.stop();
+    return;
+  }
+
+  let finalText = '';
+  const r = createRecognition(
+    e => {
+      let interim = '';
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        if (e.results[i].isFinal) finalText += e.results[i][0].transcript;
+        else interim = e.results[i][0].transcript;
+      }
+      transcript.textContent = (finalText + interim) || '…';
+    },
+    async () => {
+      btn.classList.remove('listening');
+      if (!finalText.trim()) {
+        transcript.textContent = 'Tap to speak your hole result';
+        return;
+      }
+      btn.classList.add('processing');
+      transcript.textContent = '⏳ Caddie is parsing…';
+      await lsParseVoice(finalText.trim());
+      btn.classList.remove('processing');
+    }
+  );
+
+  btn.classList.add('listening');
+  transcript.textContent = '🎤 Listening…';
+  r.start();
+}
+
+async function lsParseVoice(text) {
+  const h = ls.holes[ls.current];
+  const transcript = document.getElementById('lsVoiceTranscript');
+
+  const prompt = `You are parsing a golfer's spoken hole result into structured data.
+Current hole: ${h.hole}, Par: ${h.par}
+
+Golfer said: "${text}"
+
+Extract exactly these fields as JSON (use null if not mentioned):
+{
+  "score": <integer strokes, or null>,
+  "putts": <integer putts, or null>,
+  "gir": <true if they hit the green in regulation, false if not, null if not mentioned>,
+  "fairway": <true if they hit the fairway, false if they missed it, null if not mentioned or par 3>,
+  "hazard": <true if they hit a hazard (water/sand/OB), null if not mentioned>,
+  "beer": <true if they had a beer, null if not mentioned>
+}
+
+Rules:
+- "bogey" = par + 1, "birdie" = par - 1, "eagle" = par - 2, "par" = par, "double" = par + 2
+- "two putts", "two-putted" = putts: 2
+- "hit the fairway", "in the fairway", "down the middle" = fairway: true
+- "missed the fairway", "in the rough", "trees" = fairway: false
+- "on the green", "hit the green", "GIR" = gir: true
+- "missed the green", "short", "chip in" = gir: false
+- "water", "sand", "hazard", "OB", "out of bounds" = hazard: true
+- Only return the JSON object, nothing else.`;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 300,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+    const data = await res.json();
+    const raw = data.content?.[0]?.text || '';
+    const parsed = JSON.parse(raw.match(/\{[\s\S]*\}/)?.[0] || '{}');
+
+    // Apply parsed values to current hole
+    let applied = [];
+    if (parsed.score !== null && parsed.score !== undefined) {
+      h.score = Math.max(1, Math.min(15, parseInt(parsed.score)));
+      applied.push(`Score: ${h.score}`);
+    }
+    if (parsed.putts !== null && parsed.putts !== undefined) {
+      h.putts = Math.max(0, Math.min(9, parseInt(parsed.putts)));
+      applied.push(`Putts: ${h.putts}`);
+    }
+    if (parsed.gir === true)     { h.gir = true;     applied.push('GIR ✓'); }
+    if (parsed.gir === false)    { h.gir = false; }
+    if (parsed.fairway === true) { h.fairway = true;  applied.push('Fairway ✓'); }
+    if (parsed.fairway === false){ h.fairway = false; }
+    if (parsed.hazard === true)  { h.hazard = true;   applied.push('Hazard ⚠️'); }
+    if (parsed.beer === true)    { h.beer = true;     applied.push('🍺'); }
+
+    lsRenderHole();
+    lsPersist();
+
+    const summary = applied.length ? applied.join(' · ') : 'Nothing recognised — try again';
+    document.getElementById('lsVoiceTranscript').textContent = '✅ ' + summary;
+    setTimeout(() => {
+      const el = document.getElementById('lsVoiceTranscript');
+      if (el) el.textContent = 'Tap to speak your hole result';
+    }, 3000);
+
+  } catch(e) {
+    console.error('Voice parse error:', e);
+    document.getElementById('lsVoiceTranscript').textContent = '❌ Could not parse — tap +/− to enter manually';
+    setTimeout(() => {
+      const el = document.getElementById('lsVoiceTranscript');
+      if (el) el.textContent = 'Tap to speak your hole result';
+    }, 3000);
+  }
+}
+
+// ── Chat Voice ──
+function chatStartVoice() {
+  if (!voiceSupported()) return;
+  const btn = document.getElementById('chatVoiceBtn');
+  const status = document.getElementById('chatVoiceStatus');
+  const input = document.getElementById('aiChatInput');
+
+  if (btn.classList.contains('listening')) {
+    _recognition?.stop();
+    return;
+  }
+
+  let finalText = '';
+  const r = createRecognition(
+    e => {
+      let interim = '';
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        if (e.results[i].isFinal) finalText += e.results[i][0].transcript;
+        else interim = e.results[i][0].transcript;
+      }
+      input.value = finalText + interim;
+    },
+    () => {
+      btn.classList.remove('listening');
+      btn.textContent = '🎤';
+      if (finalText.trim()) {
+        input.value = finalText.trim();
+        status.textContent = '';
+        // Auto-send after a short delay
+        setTimeout(() => sendChatMessage(), 400);
+      } else {
+        status.textContent = '';
+      }
+    }
+  );
+
+  btn.classList.add('listening');
+  btn.textContent = '⏹';
+  status.textContent = '🎤 Listening…';
+  r.start();
 }
 
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
