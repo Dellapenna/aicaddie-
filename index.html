@@ -3598,10 +3598,10 @@ async function downloadSwingPDF() {
   doc.setTextColor(201, 168, 76);
   doc.setFontSize(20);
   doc.setFont('helvetica', 'bold');
-  doc.text('⛳ The Caddie', margin, 12);
+  doc.text('The Caddie', margin, 12);
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
-  doc.setTextColor(168, 154, 124);
+  doc.setTextColor(220, 210, 190);
   doc.text('Swing Analysis Report', margin, 18);
   const dateStr = new Date().toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
   doc.text(`${_swingClub} · ${_swingAngle} · ${dateStr}`, margin, 24);
@@ -3618,7 +3618,7 @@ async function downloadSwingPDF() {
     const grade = overall>=85?'A':overall>=75?'B':overall>=65?'C':overall>=55?'D':'F';
 
     // Card background
-    doc.setFillColor(20, 45, 28);
+    doc.setFillColor(245, 248, 245);
     doc.roundedRect(margin, y, contentW, 62, 3, 3, 'F');
     doc.setDrawColor(96, 165, 250);
     doc.setLineWidth(0.4);
@@ -3633,7 +3633,7 @@ async function downloadSwingPDF() {
     doc.setFontSize(14); doc.setFont('helvetica','bold');
     doc.text(`${overall}%`, cx, cy + 2, { align:'center' });
     doc.setFontSize(6); doc.setFont('helvetica','normal');
-    doc.setTextColor(168, 154, 124);
+    doc.setTextColor(60, 60, 60);
     doc.text('OVERALL', cx, cy + 7, { align:'center' });
 
     // Grade
@@ -3642,7 +3642,7 @@ async function downloadSwingPDF() {
     doc.text(grade, margin + 48, cy + 6);
 
     doc.setFontSize(9); doc.setFont('helvetica','normal');
-    doc.setTextColor(168, 154, 124);
+    doc.setTextColor(60, 60, 60);
     doc.text('Efficiency Grade', margin + 48, cy + 11);
 
     // Variable bars
@@ -3654,7 +3654,7 @@ async function downloadSwingPDF() {
       const color = s>=75?[111,207,151]:s>=55?[245,158,11]:[248,113,113];
 
       // Bar background
-      doc.setFillColor(40, 60, 45);
+      doc.setFillColor(220, 230, 220);
       doc.roundedRect(x, bY, bW, 14, 1, 1, 'F');
       // Bar fill
       const fillH = (s/100) * 14;
@@ -3665,7 +3665,7 @@ async function downloadSwingPDF() {
       doc.setFontSize(7); doc.setFont('helvetica','bold');
       doc.text(`${s}%`, x + bW/2, bY - 1, { align:'center' });
       // Variable name
-      doc.setTextColor(168, 154, 124);
+      doc.setTextColor(60, 60, 60);
       doc.setFontSize(5); doc.setFont('helvetica','normal');
       const shortLbl = lbls[v].split(' ')[0];
       doc.text(shortLbl, x + bW/2, bY + 17, { align:'center' });
@@ -3675,7 +3675,7 @@ async function downloadSwingPDF() {
   }
 
   // ── Frames with overlays ──
-  doc.setTextColor(201, 168, 76);
+  doc.setTextColor(139, 90, 20);
   doc.setFontSize(11); doc.setFont('helvetica','bold');
   doc.text('Swing Frames — Pose Overlay', margin, y);
   y += 5;
@@ -3692,7 +3692,7 @@ async function downloadSwingPDF() {
       doc.addImage(src, 'JPEG', x, y, frameW, frameH);
       // Label
       doc.setFontSize(6); doc.setFont('helvetica','bold');
-      doc.setTextColor(f.landmarks ? 111 : 168, f.landmarks ? 207 : 154, f.landmarks ? 151 : 124);
+      doc.setTextColor(f.landmarks ? 30 : 80, f.landmarks ? 120 : 80, f.landmarks ? 70 : 80);
       doc.text(f.label, x + frameW/2, y + frameH + 3.5, { align:'center' });
       // Green border if pose detected
       if (f.landmarks) {
@@ -3706,7 +3706,7 @@ async function downloadSwingPDF() {
 
   // Legend
   doc.setFontSize(6.5); doc.setFont('helvetica','normal');
-  doc.setTextColor(168, 154, 124);
+  doc.setTextColor(60, 60, 60);
   doc.text('🟢 Green joints = good position  ·  🟡 Amber = needs attention  ·  🔴 Red = priority fix  ·  Green frame border = pose detected', margin, y);
   y += 6;
 
@@ -3720,12 +3720,12 @@ async function downloadSwingPDF() {
     doc.line(margin, y, W - margin, y);
     y += 5;
 
-    doc.setTextColor(201, 168, 76);
+    doc.setTextColor(139, 90, 20);
     doc.setFontSize(11); doc.setFont('helvetica','bold');
     doc.text('Caddie Coaching Notes', margin, y);
     y += 6;
 
-    doc.setTextColor(245, 240, 230);
+    doc.setTextColor(30, 30, 30);
     doc.setFontSize(8.5); doc.setFont('helvetica','normal');
     const lines = doc.splitTextToSize(aiText.replace(/[^\x00-\x7E]/g, '').trim(), contentW);
     lines.forEach(line => {
@@ -3736,7 +3736,7 @@ async function downloadSwingPDF() {
         doc.setTextColor(201, 168, 76);
         doc.text(line.replace(/#+\s*/,''), margin, y);
         doc.setFont('helvetica','normal');
-        doc.setTextColor(245, 240, 230);
+        doc.setTextColor(30, 30, 30);
       } else {
         doc.text(line, margin, y);
       }
@@ -3751,7 +3751,7 @@ async function downloadSwingPDF() {
     doc.setFillColor(10, 31, 20);
     doc.rect(0, H - 10, W, 10, 'F');
     doc.setFontSize(6.5); doc.setFont('helvetica','normal');
-    doc.setTextColor(168, 154, 124);
+    doc.setTextColor(60, 60, 60);
     doc.text('The Caddie · aicaddie.netlify.app', margin, H - 4);
     doc.text(`Page ${p} of ${pageCount}`, W - margin, H - 4, { align:'right' });
   }
