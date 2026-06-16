@@ -7452,6 +7452,7 @@ Rules:
 
   } catch(e) {
     console.error('Voice parse error:', e);
+    console.error('Raw text was:', typeof raw !== 'undefined' ? raw : 'not captured');
     document.getElementById('lsVoiceTranscript').textContent = '❌ Could not parse — tap +/− to enter manually';
     setTimeout(() => {
       const el = document.getElementById('lsVoiceTranscript');
