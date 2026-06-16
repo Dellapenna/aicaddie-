@@ -6346,32 +6346,203 @@ function printDebrief(mode) {
   setTimeout(() => win.print(), 500);
 }
 
-function downloadDebrief(mode) {
-  const content = getAiOutputText(mode);
-  if (!content) { showToast('No content to download yet'); return; }
+async function downloadDebrief(mode) {
+  const rawText = document.getElementById(
+    mode==='debrief'?'aiDebriefOutput':mode==='range'?'aiRangeOutput':mode==='preround'?'aiPreRoundOutput':'aiSwingOutput'
+  );
+  const aiText = rawText ? (rawText.innerText||rawText.textContent||'').trim() : '';
+  if (!aiText) { showToast('No content to download yet'); return; }
+  showToast('⏳ Building PDF…');
+
+  // Load jsPDF
+  if (!window.jspdf) {
+    await new Promise((res,rej)=>{
+      const s=document.createElement('script');
+      s.src='https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+      s.onload=res; s.onerror=rej; document.head.appendChild(s);
+    });
+  }
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation:'portrait', unit:'mm', format:'a4' });
+  const W=210, H=297, margin=15, contentW=210-margin*2;
+  let y = margin;
+
   const title = getAiOutputTitle(mode);
-  const name = _currentProfile?.display_name || '';
-  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${title}</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
-  <style>
-    body{font-family:Inter,sans-serif;max-width:700px;margin:2rem auto;padding:0 1.5rem;color:#1a1a1a;line-height:1.7;background:#fff}
-    h1{font-family:'Playfair Display',serif;color:#1B3A2D;font-size:1.4rem;border-bottom:2px solid #C9A84C;padding-bottom:0.5rem;margin-bottom:0.25rem}
-    .meta{font-size:0.8rem;color:#666;margin-bottom:1.5rem}
-    h3{color:#1B3A2D;margin-top:1.5rem;margin-bottom:0.35rem}
-    ul{padding-left:1.25rem}li{margin-bottom:0.3rem}
-    strong{color:#1B3A2D}
-  </style></head><body>
-  <h1>⛳ The Caddie — ${esc(title)}</h1>
-  <div class="meta">${name ? 'Golfer: ' + esc(name) + ' · ' : ''}${new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'})}</div>
-  ${content}
-  </body></html>`;
-  const blob = new Blob([html], { type: 'text/html' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = title.replace(/[^a-z0-9]/gi,'_').toLowerCase() + '.html';
-  a.click();
-  URL.revokeObjectURL(url);
+  const golferName = _currentProfile?.display_name || '';
+  const dateStr = new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+
+  // ── Header ──
+  doc.setFillColor(10,31,20);
+  doc.rect(0,0,W,30,'F');
+  doc.setTextColor(201,168,76);
+  doc.setFontSize(22); doc.setFont('helvetica','bold');
+  doc.text('The Caddie',margin,13);
+  doc.setFontSize(10); doc.setFont('helvetica','normal');
+  doc.setTextColor(220,210,190);
+  doc.text(title,margin,20);
+  doc.setFontSize(8.5); doc.setTextColor(180,170,150);
+  doc.text(`${golferName ? golferName+' · ' : ''}${dateStr}`,margin,26);
+  y = 38;
+
+  // ── Debrief mode: round stats card ──
+  if (mode === 'debrief') {
+    const pickerId = document.getElementById('aiDebriefRoundPicker');
+    const roundId = pickerId ? parseInt(pickerId.value) : null;
+    const round = roundId ? _rounds.find(r=>r.id===roundId) : null;
+
+    if (round) {
+      // Stats card background
+      doc.setFillColor(240,246,240);
+      doc.roundedRect(margin,y,contentW,52,3,3,'F');
+      doc.setDrawColor(180,200,180);
+      doc.setLineWidth(0.4);
+      doc.roundedRect(margin,y,contentW,52,3,3,'S');
+
+      // Course & date
+      doc.setTextColor(30,70,40);
+      doc.setFontSize(13); doc.setFont('helvetica','bold');
+      doc.text(round.course||'Unknown Course',margin+4,y+8);
+      doc.setFontSize(9); doc.setFont('helvetica','normal');
+      doc.setTextColor(80,80,80);
+      const roundDate = round.date ? new Date(round.date+'T12:00:00').toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'}) : '';
+      doc.text(`${roundDate}${round.tee?' · '+round.tee+' tees':''}${round.holes_played?' · '+round.holes_played+' holes':''}`,margin+4,y+14);
+
+      // Stat tiles — score, vs par, putts, GIR, FIR, beers
+      const diff = round.score_to_par;
+      const diffStr = diff>0?'+'+diff:diff===0?'E':''+diff;
+      const diffColor = diff<0?[30,140,60]:diff===0?[80,80,80]:[180,50,50];
+
+      // Parse holes for GIR/FIR
+      let girPct='—', firPct='—', girHits=0,girTotal=0,firHits=0,firTotal=0;
+      try {
+        const holes = typeof round.holes==='string'?JSON.parse(round.holes):(round.holes||[]);
+        holes.filter(h=>!h.scratched).forEach(h=>{
+          girTotal++; if(h.gir) girHits++;
+          if(h.par!==3){firTotal++;if(h.fairway)firHits++;}
+        });
+        if(girTotal>0) girPct=Math.round(girHits/girTotal*100)+'%';
+        if(firTotal>0) firPct=Math.round(firHits/firTotal*100)+'%';
+      } catch(e){}
+
+      const stats = [
+        { label:'Score', value:round.score, color:[30,70,40] },
+        { label:'vs Par', value:diffStr, color:diffColor },
+        { label:'Putts', value:round.total_putts||'—', color:[90,50,160] },
+        { label:'GIR%', value:girPct, color:[30,120,70] },
+        { label:'FIR%', value:firPct, color:[30,80,160] },
+        { label:'Beers', value:round.beers||0, color:[160,100,20] },
+      ];
+
+      const tileW = contentW/stats.length;
+      stats.forEach((s,i)=>{
+        const tx = margin + i*tileW + tileW/2;
+        doc.setFontSize(16); doc.setFont('helvetica','bold');
+        doc.setTextColor(...s.color);
+        doc.text(String(s.value),tx,y+30,{align:'center'});
+        doc.setFontSize(7); doc.setFont('helvetica','normal');
+        doc.setTextColor(100,100,100);
+        doc.text(s.label,tx,y+36,{align:'center'});
+      });
+
+      // WHS diff
+      if (round.slope && round.rating) {
+        const diff18 = parseFloat(((round.score - round.rating)*(113/round.slope)).toFixed(1));
+        doc.setFontSize(8); doc.setFont('helvetica','normal');
+        doc.setTextColor(80,80,80);
+        doc.text(`WHS Differential: ${diff18}${round.slope?' · Slope '+round.slope:''}${round.rating?' · Rating '+round.rating:''}`,margin+4,y+46);
+      }
+
+      y += 58;
+    }
+  }
+
+  // ── Range mode: session details card ──
+  if (mode === 'range') {
+    doc.setFillColor(240,246,240);
+    doc.roundedRect(margin,y,contentW,22,3,3,'F');
+    doc.setDrawColor(180,200,180); doc.setLineWidth(0.4);
+    doc.roundedRect(margin,y,contentW,22,3,3,'S');
+    doc.setFontSize(10); doc.setFont('helvetica','bold');
+    doc.setTextColor(30,70,40);
+    doc.text('Range Practice Plan',margin+4,y+8);
+    doc.setFontSize(8.5); doc.setFont('helvetica','normal');
+    doc.setTextColor(60,60,60);
+    const sessionType = _rangePills['rangeSessionPills']||'General';
+    const timeAvail   = _rangePills['rangeTimePills']||'—';
+    const focusAreas  = Array.isArray(_rangePills['rangeFocusPills'])&&_rangePills['rangeFocusPills'].length ? _rangePills['rangeFocusPills'].join(', ') : 'General';
+    doc.text(`Session: ${sessionType}  ·  Time: ${timeAvail}  ·  Focus: ${focusAreas}`,margin+4,y+16);
+    y += 28;
+  }
+
+  // ── Pre-round mode: course card ──
+  if (mode === 'preround' && _preRoundCourse) {
+    const cname = _preRoundCourse.club_name||_preRoundCourse.course_name||'';
+    doc.setFillColor(240,246,240);
+    doc.roundedRect(margin,y,contentW,22,3,3,'F');
+    doc.setDrawColor(180,200,180); doc.setLineWidth(0.4);
+    doc.roundedRect(margin,y,contentW,22,3,3,'S');
+    doc.setFontSize(10); doc.setFont('helvetica','bold');
+    doc.setTextColor(30,70,40);
+    doc.text(cname,margin+4,y+8);
+    doc.setFontSize(8.5); doc.setFont('helvetica','normal');
+    doc.setTextColor(60,60,60);
+    const teeStr = _preRoundTee ? `${_preRoundTee.tee_name} tees · Slope ${_preRoundTee.slope_rating||'—'} · Rating ${_preRoundTee.course_rating||'—'}` : '';
+    doc.text(teeStr,margin+4,y+16);
+    y += 28;
+  }
+
+  // ── Divider ──
+  doc.setDrawColor(180,140,50);
+  doc.setLineWidth(0.5);
+  doc.line(margin,y,W-margin,y);
+  y += 7;
+
+  // ── Section title ──
+  const sectionTitle = mode==='debrief'?'Caddie Coaching Notes':mode==='range'?'Practice Plan':mode==='preround'?'Pre-Round Game Plan':'Analysis';
+  doc.setTextColor(139,90,20);
+  doc.setFontSize(14); doc.setFont('helvetica','bold');
+  doc.text(sectionTitle,margin,y);
+  y += 8;
+
+  // ── AI text ──
+  doc.setTextColor(20,20,20);
+  doc.setFontSize(10); doc.setFont('helvetica','normal');
+  const lines = doc.splitTextToSize(aiText.replace(/[^\x00-\x7E]/g,'').trim(), contentW);
+  lines.forEach(line => {
+    if (y > H-margin-12) { doc.addPage(); y=margin+5; }
+    const trimmed = line.trim();
+    if (trimmed.startsWith('###')||trimmed.startsWith('##')||trimmed.startsWith('#')) {
+      y += 3;
+      doc.setFont('helvetica','bold'); doc.setFontSize(11);
+      doc.setTextColor(139,90,20);
+      doc.text(trimmed.replace(/#+\s*/,''),margin,y);
+      doc.setFont('helvetica','normal'); doc.setFontSize(10);
+      doc.setTextColor(20,20,20);
+      y += 6;
+    } else if (trimmed.length===0) {
+      y += 2;
+    } else {
+      doc.text(line,margin,y);
+      y += 5.5;
+    }
+  });
+
+  // ── Footer ──
+  const pageCount = doc.getNumberOfPages();
+  for (let p=1; p<=pageCount; p++) {
+    doc.setPage(p);
+    doc.setFillColor(10,31,20);
+    doc.rect(0,H-10,W,10,'F');
+    doc.setFontSize(7.5); doc.setFont('helvetica','normal');
+    doc.setTextColor(200,200,200);
+    doc.text('The Caddie · aicaddie.netlify.app',margin,H-3.5);
+    doc.text(`Page ${p} of ${pageCount}`,W-margin,H-3.5,{align:'right'});
+  }
+
+  const fileName = title.replace(/[^a-z0-9]/gi,'_').toLowerCase()+'_'+new Date().toISOString().slice(0,10)+'.pdf';
+  doc.save(fileName);
+  showToast('✅ PDF downloaded!');
 }
 
 // ── Populate AI debrief picker when AI page is shown ──
