@@ -269,20 +269,20 @@ table.scorecard { width:100%; border-collapse:collapse; font-size:0.82rem; }
 .leaderboard-table tr:hover td { background:rgba(255,255,255,0.03); }
 .rank-badge { display:inline-flex; align-items:center; justify-content:center; width:26px; height:26px; border-radius:50%; font-weight:700; font-size:0.8rem; }
 /* Mobile leaderboard cards */
-.lb-list { display:flex; flex-direction:column; gap:0.6rem; }
-.lb-card { background:var(--card-bg); border:1px solid var(--border); border-radius:12px; padding:0.85rem 1rem; display:flex; align-items:center; gap:0.85rem; }
+.lb-list { display:flex; flex-direction:column; gap:0.5rem; }
+.lb-card { background:var(--card-bg); border:1px solid var(--border); border-radius:12px; padding:0.75rem 0.85rem; display:flex; align-items:center; gap:0.65rem; min-width:0; }
 .lb-card.top1 { border-color:rgba(212,168,67,0.5); background:rgba(212,168,67,0.04); }
 .lb-card.top2 { border-color:rgba(192,192,192,0.35); }
 .lb-card.top3 { border-color:rgba(180,120,60,0.35); }
-.lb-rank { font-family:'Playfair Display',serif; font-size:1.25rem; font-weight:700; min-width:30px; text-align:center; flex-shrink:0; }
-.lb-avatar { width:38px; height:38px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:0.95rem; color:#fff; flex-shrink:0; }
-.lb-info { flex:1; min-width:0; }
-.lb-name { font-weight:700; font-size:0.9rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-bottom:0.25rem; }
-.lb-pills { display:flex; flex-wrap:wrap; gap:0.3rem; }
-.lb-pill { font-size:0.68rem; padding:0.12rem 0.45rem; border-radius:20px; border:1px solid var(--border); color:var(--cream-muted); white-space:nowrap; }
-.lb-score-block { text-align:right; flex-shrink:0; }
-.lb-score-main { font-family:'Playfair Display',serif; font-size:1.5rem; font-weight:700; color:var(--gold); line-height:1; }
-.lb-score-sub { font-size:0.65rem; color:var(--cream-muted); text-transform:uppercase; letter-spacing:0.05em; margin-top:0.1rem; }
+.lb-rank { font-family:'Playfair Display',serif; font-size:1.1rem; font-weight:700; min-width:24px; text-align:center; flex-shrink:0; }
+.lb-avatar { width:34px; height:34px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:0.85rem; color:#fff; flex-shrink:0; }
+.lb-info { flex:1; min-width:0; overflow:hidden; }
+.lb-name { font-weight:700; font-size:0.88rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-bottom:0.2rem; }
+.lb-pills { display:flex; flex-wrap:wrap; gap:0.25rem; }
+.lb-pill { font-size:0.65rem; padding:0.1rem 0.4rem; border-radius:20px; border:1px solid var(--border); color:var(--cream-muted); white-space:nowrap; }
+.lb-score-block { text-align:right; flex-shrink:0; min-width:42px; }
+.lb-score-main { font-family:'Playfair Display',serif; font-size:1.35rem; font-weight:700; color:var(--gold); line-height:1; }
+.lb-score-sub { font-size:0.6rem; color:var(--cream-muted); text-transform:uppercase; letter-spacing:0.04em; margin-top:0.1rem; }
 .rank-1{background:var(--gold);color:var(--green-deep);} .rank-2{background:#aaa;color:#fff;} .rank-3{background:#cd7f32;color:#fff;} .rank-n{background:var(--card-bg);color:var(--cream-muted);border:1px solid var(--border);}
 .golfer-name-cell { font-weight:600; }
 .hcp-cell { color:#6ea8f7; font-weight:600; }
@@ -1193,7 +1193,7 @@ nav { padding: 0.8rem 1rem !important; }
       <p style="font-size:0.78rem;color:var(--cream-muted);margin-top:0.5rem">Names shown based on each golfer's privacy preference. <a onclick="showPage('profile',null)" style="color:var(--gold);cursor:pointer;text-decoration:underline">Manage yours in Profile</a>.</p>
     </div>
 
-    <div class="card"><div id="leaderboardBody"></div></div>
+    <div id="leaderboardBody"></div>
     <div class="card section-gap">
       <div class="chart-title" id="lbChartTitle">Avg Score — All Golfers</div>
       <div id="lbChart"></div>
@@ -2922,30 +2922,31 @@ async function renderNational() {
   if (sortBy === 'beers')  sorted.sort((a,b) => b.total_beers - a.total_beers);
 
   const myAnonId = _currentProfile?.anonymous_id;
-  const rc = i => i===0?'rank-1':i===1?'rank-2':i===2?'rank-3':'rank-n';
+  const medals = ['🥇','🥈','🥉'];
+  const topClass = i => i===0?'top1':i===1?'top2':i===2?'top3':'';
+  const rankColor = i => i===0?'var(--gold)':i===1?'#c0c0c0':i===2?'#c87941':'var(--cream-muted)';
 
-  el.innerHTML = `<table class="leaderboard-table">
-    <thead><tr><th>#</th><th>Golfer</th><th>Rounds</th><th>Avg Score</th><th>Best</th><th>Avg Putts</th><th>🍺 Total</th></tr></thead>
-    <tbody>${sorted.map((r,i) => {
-      const isMe = r.anonymous_id === myAnonId;
-      // Show real name if golfer opted in, otherwise show anonymous handle
-      const displayName = r.show_real_name && r.display_name ? r.display_name : r.anonymous_id;
-      return `<tr style="${isMe?'background:rgba(201,168,76,0.08);':''}">
-        <td><span class="rank-badge ${rc(i)}">${i+1}</span></td>
-        <td>
-          <div style="display:flex;align-items:center;gap:0.5rem">
-            <div style="width:20px;height:20px;border-radius:50%;background:${r.avatar_color||'#C9A84C'};flex-shrink:0"></div>
-            <strong style="${isMe?'color:var(--gold)':''}">${esc(displayName)}${isMe?' 👈':''}</strong>
-          </div>
-        </td>
-        <td>${r.rounds_played}</td>
-        <td style="color:var(--gold);font-weight:700">${r.avg_score||'—'}</td>
-        <td>${r.best_score||'—'}</td>
-        <td style="color:#a78bfa">${r.avg_putts||'—'}</td>
-        <td style="color:var(--amber)">${r.total_beers||0}</td>
-      </tr>`;
-    }).join('')}</tbody>
-  </table>`;
+  el.innerHTML = `<div class="lb-list">${sorted.map((r,i) => {
+    const isMe = r.anonymous_id === myAnonId;
+    const displayName = r.show_real_name && r.display_name ? r.display_name : r.anonymous_id;
+    return `<div class="lb-card ${topClass(i)}" style="${isMe?'border-color:rgba(201,168,67,0.6);background:rgba(201,168,67,0.06)':''}">
+      <div class="lb-rank" style="color:${rankColor(i)}">${medals[i]||i+1}</div>
+      <div class="lb-avatar" style="background:${r.avatar_color||'#C9A84C'}">${esc(displayName).charAt(0).toUpperCase()}</div>
+      <div class="lb-info">
+        <div class="lb-name" style="${isMe?'color:var(--gold)':''}">${esc(displayName)}${isMe?' 👈':''}</div>
+        <div class="lb-pills">
+          <span class="lb-pill">${r.rounds_played} rounds</span>
+          ${r.best_score ? `<span class="lb-pill">Best ${r.best_score}</span>` : ''}
+          ${r.avg_putts ? `<span class="lb-pill" style="color:#a78bfa;border-color:rgba(167,139,250,0.3)">🟣 ${r.avg_putts}</span>` : ''}
+          ${r.total_beers > 0 ? `<span class="lb-pill" style="color:var(--amber);border-color:rgba(201,168,76,0.3)">🍺 ${r.total_beers}</span>` : ''}
+        </div>
+      </div>
+      <div class="lb-score-block">
+        <div class="lb-score-main">${r.avg_score||'—'}</div>
+        <div class="lb-score-sub">avg score</div>
+      </div>
+    </div>`;
+  }).join('')}</div>`;
 
   renderBarChart('lbChart', sorted.slice(0,10), r=>r.avg_score||0,
     r => r.show_real_name && r.display_name ? r.display_name : r.anonymous_id, 'bar-fill-score', '');
@@ -5851,9 +5852,9 @@ async function renderLeaderboard(){
         <div class="lb-name">${esc(r.name)}</div>
         <div class="lb-pills">
           <span class="lb-pill">${r.rounds} round${r.rounds!==1?'s':''}</span>
-          ${r.best ? `<span class="lb-pill">Best: ${r.best}</span>` : ''}
+          ${r.best ? `<span class="lb-pill">Best ${r.best}</span>` : ''}
           ${whsStr ? `<span class="lb-pill" style="color:#6fcf97;border-color:rgba(111,207,151,0.3)">HCP ${whsStr}</span>` : ''}
-          ${r.avgPutts !== '—' ? `<span class="lb-pill" style="color:#a78bfa;border-color:rgba(167,139,250,0.3)">🟣 ${r.avgPutts} putts</span>` : ''}
+          ${r.avgPutts !== '—' ? `<span class="lb-pill" style="color:#a78bfa;border-color:rgba(167,139,250,0.3)">🟣 ${r.avgPutts}</span>` : ''}
           ${r.beers > 0 ? `<span class="lb-pill" style="color:var(--amber);border-color:rgba(201,168,76,0.3)">🍺 ${r.beers}</span>` : ''}
         </div>
       </div>
