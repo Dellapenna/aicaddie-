@@ -158,10 +158,14 @@ table.scorecard { width:100%; border-collapse:collapse; font-size:0.82rem; }
 
 /* STATS */
 .stats-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:1rem; margin-bottom:2rem; }
-.stat-tile { background:var(--card-bg); border:1px solid var(--border); border-radius:10px; padding:1.2rem; text-align:center; }
+.stat-tile { background:var(--card-bg); border:1px solid var(--border); border-radius:10px; padding:1.2rem; text-align:center; position:relative; }
 .stat-tile .value { font-family:'Playfair Display',serif; font-size:2.2rem; color:var(--gold); line-height:1; }
 .stat-tile .label { font-size:0.72rem; color:var(--cream-muted); text-transform:uppercase; letter-spacing:0.06em; margin-top:0.4rem; }
 .stat-tile .sub { font-size:0.8rem; color:var(--cream-muted); margin-top:0.2rem; }
+.stat-trend { position:absolute; top:0.6rem; right:0.7rem; font-size:0.72rem; font-weight:700; display:flex; align-items:center; gap:0.15rem; }
+.trend-up   { color:#6fcf97; } /* improving — green */
+.trend-down { color:#f87171; } /* getting worse — red */
+.trend-flat { color:var(--cream-muted); }
 .beer-tile .value { color:var(--amber); }
 .hcp-tile .value { color:#6ea8f7; }
 .putt-tile .value { color:#a78bfa; }
@@ -5974,51 +5978,118 @@ function renderStats(){
     grid.innerHTML=`<div class="empty-state" style="grid-column:1/-1"><div class="icon">📊</div><p>No rounds yet.</p></div>`;
     ['scoreChart','beerChart','puttChart'].forEach(id=>document.getElementById(id).innerHTML=''); return;
   }
-  const parseHoles=r=>typeof r.holes==='string'?JSON.parse(r.holes||'[]'):(r.holes||[]);
+  const parseHoles=r=>{ try{ return typeof r.holes==='string'?JSON.parse(r.holes||'[]'):(r.holes||[]); }catch(e){return[];} };
   const stp=r=>r.score_to_par??r.scoreToPar??0;
   const scored=rounds.filter(r=>r.score>0);
-  const avgScore=scored.length?(scored.reduce((s,r)=>s+r.score,0)/scored.length).toFixed(1):'—';
-  const avgToPar=scored.length?scored.reduce((s,r)=>s+stp(r),0)/scored.length:null;
-  const avgToParStr=avgToPar!==null?(avgToPar>=0?`+${avgToPar.toFixed(1)}`:avgToPar.toFixed(1)):'—';
-  const bestRound=scored.length?scored.reduce((b,r)=>r.score<b.score?r:b):null;
-  const totalBeers=rounds.reduce((s,r)=>s+r.beers,0);
-  const avgBeers=rounds.length?(totalBeers/rounds.length).toFixed(1):'—';
-  const mostBeers=rounds.reduce((b,r)=>r.beers>b?r.beers:b,0);
 
-  // Putts stats
-  const puttRounds=rounds.filter(r=>r.total_putts>0);
-  const avgPutts=puttRounds.length?(puttRounds.reduce((s,r)=>s+r.total_putts,0)/puttRounds.length).toFixed(1):'—';
-  const bestPutts=puttRounds.length?puttRounds.reduce((b,r)=>r.total_putts<b?r.total_putts:b,999):'—';
+  // ── Trend helpers ──
+  // Compare avg of recent half vs older half. For scores/putts lower=better so flip sign.
+  function calcTrend(arr, fn, lowerIsBetter=false) {
+    if (arr.length < 4) return null;
+    const mid  = Math.floor(arr.length / 2);
+    const old  = arr.slice(mid);  // older rounds (higher index = older since sorted desc)
+    const rec  = arr.slice(0, mid); // recent rounds
+    const avgOld = old.reduce((s,r)=>s+fn(r),0)/old.length;
+    const avgRec = rec.reduce((s,r)=>s+fn(r),0)/rec.length;
+    const delta = avgRec - avgOld; // positive = recent is higher
+    return lowerIsBetter ? -delta : delta; // flip so positive always means "improving"
+  }
+
+  // Score trends
+  const scoreTrend  = calcTrend(scored, r=>r.score, true);
+  const avgScore    = scored.length?(scored.reduce((s,r)=>s+r.score,0)/scored.length).toFixed(1):'—';
+  const avgToPar    = scored.length?scored.reduce((s,r)=>s+stp(r),0)/scored.length:null;
+  const avgToParStr = avgToPar!==null?(avgToPar>=0?`+${avgToPar.toFixed(1)}`:avgToPar.toFixed(1)):'—';
+  const bestRound   = scored.length?scored.reduce((b,r)=>r.score<b.score?r:b):null;
+  const totalBeers  = rounds.reduce((s,r)=>s+r.beers,0);
+  const avgBeers    = rounds.length?(totalBeers/rounds.length).toFixed(1):'—';
+  const mostBeers   = rounds.reduce((b,r)=>r.beers>b?r.beers:b,0);
+
+  // Putts trends
+  const puttRounds  = rounds.filter(r=>r.total_putts>0);
+  const puttTrend   = calcTrend(puttRounds, r=>r.total_putts, true);
+  const avgPutts    = puttRounds.length?(puttRounds.reduce((s,r)=>s+r.total_putts,0)/puttRounds.length).toFixed(1):'—';
+  const bestPutts   = puttRounds.length?puttRounds.reduce((b,r)=>r.total_putts<b?r.total_putts:b,999):'—';
   const totalHolesWithPutts=rounds.reduce((s,r)=>s+parseHoles(r).filter(h=>h.putts>0).length,0);
   const totalPuttCount=rounds.reduce((s,r)=>s+(r.total_putts||0),0);
-  const avgPuttsPerHole=totalHolesWithPutts>0?(totalPuttCount/rounds.reduce((s,r)=>s+parseHoles(r).filter(h=>h.putts>0).length,0)).toFixed(2):'—';
+  const avgPuttsPerHole=totalHolesWithPutts>0?(totalPuttCount/totalHolesWithPutts).toFixed(2):'—';
 
+  // Scoring breakdown
   let eagles=0,birdies=0,pars=0,bogeys=0,doubles=0;
   rounds.forEach(r=>parseHoles(r).forEach(h=>{
-    if(!h.score)return;const d=h.score-h.par;
+    if(!h.score||h.scratched)return; const d=h.score-h.par;
     if(d<=-2)eagles++;else if(d===-1)birdies++;else if(d===0)pars++;else if(d===1)bogeys++;else doubles++;
   }));
 
+  // GIR stats
+  let girHits=0,girTotal=0;
+  rounds.forEach(r=>parseHoles(r).forEach(h=>{
+    if(h.scratched)return; girTotal++;
+    if(h.gir)girHits++;
+  }));
+  const girPct = girTotal>0 ? Math.round((girHits/girTotal)*100) : null;
+  const girPctStr = girPct!==null ? girPct+'%' : '—';
+
+  // GIR trend — build per-round GIR% array
+  const girPerRound = rounds.map(r=>{
+    const holes=parseHoles(r).filter(h=>!h.scratched);
+    if(!holes.length)return null;
+    const hits=holes.filter(h=>h.gir).length;
+    return hits/holes.length*100;
+  }).filter(v=>v!==null);
+  const girTrend = calcTrend(girPerRound.map((v,i)=>({v,i})), r=>r.v, false);
+
+  // FIR stats
+  let firHits=0,firTotal=0;
+  rounds.forEach(r=>parseHoles(r).forEach(h=>{
+    if(h.scratched||h.par===3)return; firTotal++;
+    if(h.fairway)firHits++;
+  }));
+  const firPct = firTotal>0 ? Math.round((firHits/firTotal)*100) : null;
+  const firPctStr = firPct!==null ? firPct+'%' : '—';
+
+  // FIR trend
+  const firPerRound = rounds.map(r=>{
+    const holes=parseHoles(r).filter(h=>!h.scratched&&h.par!==3);
+    if(!holes.length)return null;
+    const hits=holes.filter(h=>h.fairway).length;
+    return hits/holes.length*100;
+  }).filter(v=>v!==null);
+  const firTrend = calcTrend(firPerRound.map((v,i)=>({v,i})), r=>r.v, false);
+
+  // WHS
   const whs=filter?calcWHS(rounds):null;
   const whsTile=filter?(whs?tile('🏌️',whs.hcp>0?`+${whs.hcp}`:whs.hcp,'WHS Handicap',`Best ${whs.numUsed} of ${whs.diffs.length} rounds`,false,'hcp-tile'):tile('🏌️','—','WHS Handicap','Need 3+ rated rounds',false,'hcp-tile')):'';
 
   grid.innerHTML=`
     ${tile('🏆',rounds.length,'Rounds Played')}
-    ${tile('📊',avgScore,'Avg Score',avgToParStr+' to par')}
+    ${tile('📊',avgScore,'Avg Score',avgToParStr+' to par',false,'',scoreTrend)}
     ${tile('⭐',bestRound?bestRound.score:'—','Best Round',bestRound?bestRound.course:'')}
     ${whsTile}
-    ${tile('🟣',avgPutts,'Avg Putts/Round','',false,'putt-tile')}
+    ${tile('🟣',avgPutts,'Avg Putts/Round','',false,'putt-tile',puttTrend)}
     ${tile('🎯',avgPuttsPerHole,'Avg Putts/Hole','',false,'putt-tile')}
     ${tile('✨',bestPutts,'Best Putting Round','fewest putts',false,'putt-tile')}
+    ${girPct!==null ? tile('🟢',girPctStr,'GIR %',`${girHits} of ${girTotal} holes`,false,'',girTrend) : ''}
+    ${firPct!==null ? tile('🏁',firPctStr,'FIR %',`${firHits} of ${firTotal} holes`,false,'',firTrend) : ''}
     ${tile('🦅',eagles,'Eagles')}${tile('🐦',birdies,'Birdies')}${tile('✅',pars,'Pars')}
     ${tile('☝️',bogeys,'Bogeys')}${tile('❌',doubles,'Double+')}
     ${tile('🍺',totalBeers,'Total Beers',`Avg ${avgBeers}/round`,true)}
     ${tile('🍻',mostBeers,'Most in a Round','',true)}
   `;
 
+  // Trend legend
+  if (scored.length >= 4) {
+    const legendEl = document.getElementById('statsExtra');
+    legendEl.innerHTML = `<div style="font-size:0.72rem;color:var(--cream-muted);text-align:right;margin-bottom:0.75rem">
+      <span style="color:#6fcf97">↑</span> improving &nbsp;
+      <span style="color:#f87171">↓</span> getting worse &nbsp;
+      <span style="color:var(--cream-muted)">→</span> flat &nbsp;·&nbsp; vs your previous ${Math.floor(scored.length/2)} rounds
+    </div>`;
+  }
+
   // WHS breakdown
   if(whs&&filter){
-    document.getElementById('statsExtra').innerHTML=`<div class="card section-gap">
+    document.getElementById('statsExtra').innerHTML+=`<div class="card section-gap">
       <div class="card-title">🏌️ WHS Breakdown — ${esc(filter)}</div>
       <div class="hcp-breakdown"><strong>Handicap Index: ${whs.hcp>0?'+':''}${whs.hcp}</strong><br>
       Using best <strong>${whs.numUsed}</strong> of <strong>${whs.diffs.length}</strong> differentials × 0.96<br>
@@ -6182,8 +6253,15 @@ function buildLbRows(names, rounds) {
 // ─────────────────────────────────────
 //  HELPERS
 // ─────────────────────────────────────
-function tile(icon,value,label,sub='',beer=false,extraClass=''){
-  return `<div class="stat-tile ${beer?'beer-tile':''} ${extraClass}"><div style="font-size:1.3rem">${icon}</div><div class="value">${value}</div><div class="label">${label}</div>${sub?`<div class="sub">${sub}</div>`:''}</div>`;
+function tile(icon, value, label, sub='', beer=false, extraClass='', trend=null){
+  let trendHtml = '';
+  if (trend !== null) {
+    const cls   = trend > 0 ? 'trend-up' : trend < 0 ? 'trend-down' : 'trend-flat';
+    const arrow = trend > 0 ? '↑' : trend < 0 ? '↓' : '→';
+    const sign  = trend > 0 ? '+' : '';
+    trendHtml = `<div class="stat-trend ${cls}">${arrow} ${sign}${Math.abs(trend).toFixed(1)}</div>`;
+  }
+  return `<div class="stat-tile ${beer?'beer-tile':''} ${extraClass}"><div style="font-size:1.3rem">${icon}</div><div class="value">${value}</div><div class="label">${label}</div>${sub?`<div class="sub">${sub}</div>`:''}${trendHtml}</div>`;
 }
 function renderBarChart(id,data,valueFn,labelFn,cls,unit){
   const el=document.getElementById(id);
