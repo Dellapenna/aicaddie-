@@ -3203,14 +3203,29 @@ function onSwingVideoSelected(event) {
   if (!file) return;
   if (file.size > 100 * 1024 * 1024) { showToast('Video too large — max 100MB'); return; }
   _swingVideoFile = file;
-  const url = URL.createObjectURL(file);
   const video = document.getElementById('swingVideo');
-  video.src = url;
+
+  // Clear any previous src first
+  video.src = '';
+  video.load();
+
   document.getElementById('swingUploadArea').style.display = 'none';
   document.getElementById('swingPreviewArea').style.display = 'block';
   document.getElementById('swingReportCard').style.display = 'none';
-  document.getElementById('swingStatus').textContent = '';
-  video.onloadedmetadata = () => extractSwingFrames(video);
+  document.getElementById('swingStatus').textContent = '⏳ Loading video…';
+
+  const url = URL.createObjectURL(file);
+  video.src = url;
+
+  // Use canplay for best cross-browser/mobile support
+  const onReady = () => {
+    video.removeEventListener('canplay', onReady);
+    video.removeEventListener('loadedmetadata', onReady);
+    extractSwingFrames(video);
+  };
+  video.addEventListener('canplay', onReady, { once: true });
+  video.addEventListener('loadedmetadata', onReady, { once: true });
+  video.load();
 }
 
 function clearSwingVideo() {
@@ -3230,34 +3245,75 @@ function clearSwingVideo() {
 function extractSwingFrames(video) {
   const canvas = document.getElementById('swingCanvas');
   const ctx = canvas.getContext('2d');
-  const duration = video.duration;
   const labels = ['Address','Takeaway','Top','Impact','Follow-Through'];
   const positions = [0.05, 0.25, 0.5, 0.72, 0.92];
   _swingFrames = [];
   document.getElementById('swingFrameStrip').innerHTML = '';
-  document.getElementById('swingStatus').textContent = '⏳ Extracting frames…';
+  document.getElementById('swingStatus').textContent = '⏳ Loading video…';
 
-  function seekFrame(idx) {
-    if (idx >= positions.length) { runPoseOnFrames(); return; }
-    video.currentTime = positions[idx] * duration;
-    const onSeeked = () => {
-      video.removeEventListener('seeked', onSeeked);
-      setTimeout(() => {
-        try {
-          canvas.width  = Math.min(video.videoWidth, 640);
-          canvas.height = Math.min(video.videoHeight, 480);
-          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-          const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
-          _swingFrames.push({ label: labels[idx], dataUrl, landmarks: null, overlayDataUrl: null, scores: null });
-          document.getElementById('swingStatus').textContent = `⏳ Frame ${idx+1} of ${positions.length} extracted…`;
-        } catch(e) { console.warn('Frame capture error', e); }
-        seekFrame(idx + 1);
-      }, 200);
-    };
-    video.addEventListener('seeked', onSeeked, { once: true });
+  function doExtract() {
+    const duration = video.duration;
+    if (!duration || isNaN(duration)) {
+      document.getElementById('swingStatus').textContent = '❌ Could not read video duration. Try a different format (MP4 works best).';
+      return;
+    }
+    document.getElementById('swingStatus').textContent = '⏳ Extracting frames…';
+
+    function seekFrame(idx) {
+      if (idx >= positions.length) {
+        runPoseOnFrames();
+        return;
+      }
+      const t = Math.max(0, Math.min(positions[idx] * duration, duration - 0.1));
+      document.getElementById('swingStatus').textContent = `⏳ Frame ${idx+1} of ${positions.length}…`;
+
+      // Timeout in case seeked never fires
+      let seeked = false;
+      const timeout = setTimeout(() => {
+        if (seeked) return;
+        seeked = true;
+        console.warn('Seek timeout on frame', idx, '— capturing anyway');
+        captureFrame(idx);
+      }, 3000);
+
+      const onSeeked = () => {
+        if (seeked) return;
+        seeked = true;
+        clearTimeout(timeout);
+        setTimeout(() => captureFrame(idx), 100);
+      };
+
+      video.addEventListener('seeked', onSeeked, { once: true });
+      video.currentTime = t;
+    }
+
+    function captureFrame(idx) {
+      try {
+        canvas.width  = Math.min(video.videoWidth  || 640, 640);
+        canvas.height = Math.min(video.videoHeight || 480, 480);
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+        _swingFrames.push({ label: labels[idx], dataUrl, landmarks: null, overlayDataUrl: null, scores: null });
+      } catch(e) {
+        console.warn('Frame capture error:', e);
+        // Push a placeholder so we don't get stuck
+        _swingFrames.push({ label: labels[idx], dataUrl: null, landmarks: null, overlayDataUrl: null, scores: null });
+      }
+      seekFrame(idx + 1);
+    }
+
+    seekFrame(0);
   }
-  if (video.readyState >= 2) seekFrame(0);
-  else video.addEventListener('loadeddata', () => seekFrame(0), { once: true });
+
+  // Wait for enough video data
+  if (video.readyState >= 1) {
+    doExtract();
+  } else {
+    const onReady = () => { video.removeEventListener('loadedmetadata', onReady); doExtract(); };
+    video.addEventListener('loadedmetadata', onReady);
+    // Also kick off load in case it's stalled
+    video.load();
+  }
 }
 
 async function loadPoseModel() {
