@@ -2209,7 +2209,7 @@ nav { padding: 0.8rem 1rem !important; }
 
           <!-- Video preview + frame strip -->
           <div id="swingPreviewArea" style="display:none;margin-bottom:1rem">
-            <video id="swingVideo" style="width:100%;border-radius:10px;border:1px solid var(--border);max-height:220px;object-fit:contain;background:#000" playsinline controls></video>
+            <video id="swingVideo" style="width:100%;border-radius:10px;border:1px solid var(--border);max-height:220px;object-fit:contain;background:#000" playsinline preload="auto" controls></video>
             <div style="margin-top:0.75rem">
               <div style="font-size:0.72rem;font-weight:600;color:var(--cream-muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.4rem">Extracted Frames</div>
               <div id="swingFrameStrip" style="display:flex;gap:0.4rem;overflow-x:auto;padding-bottom:0.25rem"></div>
@@ -3203,38 +3203,52 @@ function extractSwingFrames(video) {
   const canvas = document.getElementById('swingCanvas');
   const ctx = canvas.getContext('2d');
   const duration = video.duration;
-  const frameCount = 5;
   const labels = ['Address', 'Takeaway', 'Top', 'Impact', 'Follow-Through'];
-  const positions = [0.05, 0.25, 0.5, 0.72, 0.92]; // % through video
+  const positions = [0.05, 0.25, 0.5, 0.72, 0.92];
 
   _swingFrames = [];
   const strip = document.getElementById('swingFrameStrip');
   strip.innerHTML = '<span style="font-size:0.75rem;color:var(--cream-muted)">Extracting frames…</span>';
+  document.getElementById('swingStatus').textContent = '⏳ Extracting frames…';
 
-  let extracted = 0;
-  const frameData = new Array(frameCount);
+  // Sequential seek — wait for each frame before moving to next
+  function seekFrame(index) {
+    if (index >= positions.length) {
+      renderFrameStrip(_swingFrames);
+      return;
+    }
 
-  positions.forEach((pos, i) => {
-    const t = pos * duration;
-    const tmpVideo = document.createElement('video');
-    tmpVideo.src = video.src;
-    tmpVideo.muted = true;
-    tmpVideo.currentTime = t;
-    tmpVideo.onloadeddata = () => {};
-    tmpVideo.onseeked = () => {
-      canvas.width  = Math.min(tmpVideo.videoWidth,  640);
-      canvas.height = Math.min(tmpVideo.videoHeight, 480);
-      ctx.drawImage(tmpVideo, 0, 0, canvas.width, canvas.height);
-      const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
-      frameData[i] = { label: labels[i], dataUrl };
-      extracted++;
-      if (extracted === frameCount) {
-        _swingFrames = frameData;
-        renderFrameStrip(frameData);
-      }
+    const t = positions[index] * duration;
+    video.currentTime = t;
+
+    const onSeeked = () => {
+      video.removeEventListener('seeked', onSeeked);
+      // Small delay to let the frame decode fully
+      setTimeout(() => {
+        try {
+          canvas.width  = Math.min(video.videoWidth,  640);
+          canvas.height = Math.min(video.videoHeight, 480);
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.75);
+          _swingFrames.push({ label: labels[index], dataUrl });
+          // Update status as we go
+          document.getElementById('swingStatus').textContent = `⏳ Frame ${index + 1} of ${positions.length}…`;
+        } catch(e) {
+          console.warn('Frame capture error at index', index, e);
+        }
+        seekFrame(index + 1);
+      }, 150);
     };
-    setTimeout(() => { tmpVideo.currentTime = t; }, i * 200);
-  });
+
+    video.addEventListener('seeked', onSeeked, { once: true });
+  }
+
+  // Make sure video is ready before starting
+  if (video.readyState >= 2) {
+    seekFrame(0);
+  } else {
+    video.addEventListener('loadeddata', () => seekFrame(0), { once: true });
+  }
 }
 
 function renderFrameStrip(frames) {
