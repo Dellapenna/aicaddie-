@@ -140,6 +140,27 @@ table.scorecard { width:100%; border-collapse:collapse; font-size:0.82rem; }
 .ls-voice-btn.listening { border-color:#f87171; background:rgba(248,113,113,0.12); animation:voicePulse 1s infinite; }
 .ls-voice-btn.processing { border-color:#6fcf97; background:rgba(111,207,151,0.12); }
 .ls-voice-transcript { font-size:0.75rem; color:var(--cream-muted); text-align:center; margin-top:0.35rem; font-style:italic; min-height:1.1rem; max-width:260px; line-height:1.4; }
+/* Swing report card */
+.swing-report-card { background:var(--card-bg); border:1px solid rgba(96,165,250,0.3); border-radius:12px; padding:1.1rem; margin-bottom:1rem; }
+.swing-report-title { font-family:'Playfair Display',serif; font-size:1.1rem; color:#60a5fa; margin-bottom:0.25rem; }
+.swing-score-ring { display:flex; align-items:center; justify-content:center; gap:1.5rem; margin:1rem 0; flex-wrap:wrap; }
+.swing-score-circle { width:80px; height:80px; border-radius:50%; display:flex; align-items:center; justify-content:center; flex-direction:column; border:3px solid; flex-shrink:0; }
+.swing-score-circle .sc-val { font-family:'Playfair Display',serif; font-size:1.5rem; font-weight:700; line-height:1; }
+.swing-score-circle .sc-lbl { font-size:0.55rem; text-transform:uppercase; letter-spacing:0.06em; margin-top:0.1rem; text-align:center; }
+.swing-score-circle.green { border-color:#6fcf97; color:#6fcf97; }
+.swing-score-circle.yellow { border-color:#f59e0b; color:#f59e0b; }
+.swing-score-circle.red { border-color:#f87171; color:#f87171; }
+.swing-variables { display:flex; flex-direction:column; gap:0.5rem; margin-bottom:1rem; }
+.swing-var-row { display:flex; align-items:center; justify-content:space-between; padding:0.55rem 0.75rem; background:rgba(0,0,0,0.15); border-radius:8px; gap:0.75rem; }
+.swing-var-name { font-size:0.82rem; font-weight:600; flex:1; }
+.swing-var-bar { flex:2; height:6px; background:rgba(255,255,255,0.08); border-radius:3px; overflow:hidden; }
+.swing-var-fill { height:100%; border-radius:3px; transition:width 0.6s ease; }
+.swing-var-score { font-size:0.8rem; font-weight:700; min-width:32px; text-align:right; }
+.swing-frame-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:0.4rem; margin-bottom:1rem; }
+.swing-frame-item { text-align:center; }
+.swing-frame-item canvas { width:100%; border-radius:6px; border:2px solid var(--border); display:block; }
+.swing-frame-item.best canvas { border-color:#6fcf97; }
+.swing-frame-item .sf-label { font-size:0.6rem; color:var(--cream-muted); margin-top:0.2rem; }
 
 /* SCORE COLORS */
 .score-eagle  { background:#1a4fa0 !important; color:#fff !important; border-radius:50%; }
@@ -2211,9 +2232,11 @@ nav { padding: 0.8rem 1rem !important; }
           <div id="swingPreviewArea" style="display:none;margin-bottom:1rem">
             <video id="swingVideo" style="width:100%;border-radius:10px;border:1px solid var(--border);max-height:220px;object-fit:contain;background:#000" playsinline preload="auto" controls></video>
             <div style="margin-top:0.75rem">
-              <div style="font-size:0.72rem;font-weight:600;color:var(--cream-muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.4rem">Extracted Frames</div>
-              <div id="swingFrameStrip" style="display:flex;gap:0.4rem;overflow-x:auto;padding-bottom:0.25rem"></div>
+              <div style="font-size:0.72rem;font-weight:600;color:var(--cream-muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.5rem">Pose Analysis Frames</div>
+              <div id="swingFrameStrip" class="swing-frame-grid"></div>
             </div>
+            <!-- Report card populated after pose analysis -->
+            <div id="swingReportCard" style="display:none;margin-top:1rem"></div>
             <button class="btn btn-outline btn-sm" style="margin-top:0.75rem" onclick="clearSwingVideo()">✕ Remove Video</button>
           </div>
 
@@ -2246,6 +2269,7 @@ nav { padding: 0.8rem 1rem !important; }
           </div>
 
           <canvas id="swingCanvas" style="display:none"></canvas>
+          <canvas id="swingOverlayCanvas" style="display:none"></canvas>
           <button class="btn btn-ai" id="swingAnalyseBtn" style="width:100%;justify-content:center;background:linear-gradient(135deg,#1e3a5f,#2a5298);border-color:#60a5fa;color:#60a5fa" onclick="runSwingAnalysis()">🎥 Analyse My Swing</button>
           <div id="swingStatus" style="font-size:0.78rem;color:var(--cream-muted);text-align:center;margin-top:0.5rem;min-height:1.2rem"></div>
         </div>
@@ -3158,12 +3182,14 @@ Be extremely specific. Reference their actual stats. Name the drills. Give exact
 }
 
 // ─────────────────────────────────────
-//  SWING ANALYSIS
+//  SWING ANALYSIS — with pose overlay
 // ─────────────────────────────────────
 let _swingVideoFile = null;
-let _swingFrames    = []; // array of base64 jpeg strings
+let _swingFrames    = [];
 let _swingAngle     = 'face-on';
 let _swingClub      = 'Driver';
+let _poseDetector   = null;
+let _poseModelLoaded = false;
 
 function toggleSwingPill(pill, groupId) {
   document.querySelectorAll(`#${groupId} .cond-pill`).forEach(p => p.classList.remove('selected'));
@@ -3182,204 +3208,311 @@ function onSwingVideoSelected(event) {
   video.src = url;
   document.getElementById('swingUploadArea').style.display = 'none';
   document.getElementById('swingPreviewArea').style.display = 'block';
+  document.getElementById('swingReportCard').style.display = 'none';
   document.getElementById('swingStatus').textContent = '';
-  // Extract frames once metadata loads
   video.onloadedmetadata = () => extractSwingFrames(video);
 }
 
 function clearSwingVideo() {
-  _swingVideoFile = null;
-  _swingFrames = [];
+  _swingVideoFile = null; _swingFrames = [];
   const video = document.getElementById('swingVideo');
   video.src = '';
   document.getElementById('swingVideoInput').value = '';
   document.getElementById('swingUploadArea').style.display = 'block';
   document.getElementById('swingPreviewArea').style.display = 'none';
   document.getElementById('swingFrameStrip').innerHTML = '';
+  document.getElementById('swingReportCard').style.display = 'none';
   document.getElementById('swingStatus').textContent = '';
+  document.getElementById('aiSwingOutput').style.display = 'none';
+  document.getElementById('aiSwingActions').style.display = 'none';
 }
 
 function extractSwingFrames(video) {
   const canvas = document.getElementById('swingCanvas');
   const ctx = canvas.getContext('2d');
   const duration = video.duration;
-  const labels = ['Address', 'Takeaway', 'Top', 'Impact', 'Follow-Through'];
+  const labels = ['Address','Takeaway','Top','Impact','Follow-Through'];
   const positions = [0.05, 0.25, 0.5, 0.72, 0.92];
-
   _swingFrames = [];
-  const strip = document.getElementById('swingFrameStrip');
-  strip.innerHTML = '<span style="font-size:0.75rem;color:var(--cream-muted)">Extracting frames…</span>';
+  document.getElementById('swingFrameStrip').innerHTML = '';
   document.getElementById('swingStatus').textContent = '⏳ Extracting frames…';
 
-  // Sequential seek — wait for each frame before moving to next
-  function seekFrame(index) {
-    if (index >= positions.length) {
-      renderFrameStrip(_swingFrames);
-      return;
-    }
-
-    const t = positions[index] * duration;
-    video.currentTime = t;
-
+  function seekFrame(idx) {
+    if (idx >= positions.length) { runPoseOnFrames(); return; }
+    video.currentTime = positions[idx] * duration;
     const onSeeked = () => {
       video.removeEventListener('seeked', onSeeked);
-      // Small delay to let the frame decode fully
       setTimeout(() => {
         try {
-          canvas.width  = Math.min(video.videoWidth,  640);
+          canvas.width  = Math.min(video.videoWidth, 640);
           canvas.height = Math.min(video.videoHeight, 480);
           ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-          const dataUrl = canvas.toDataURL('image/jpeg', 0.75);
-          _swingFrames.push({ label: labels[index], dataUrl });
-          // Update status as we go
-          document.getElementById('swingStatus').textContent = `⏳ Frame ${index + 1} of ${positions.length}…`;
-        } catch(e) {
-          console.warn('Frame capture error at index', index, e);
-        }
-        seekFrame(index + 1);
-      }, 150);
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+          _swingFrames.push({ label: labels[idx], dataUrl, landmarks: null, overlayDataUrl: null, scores: null });
+          document.getElementById('swingStatus').textContent = `⏳ Frame ${idx+1} of ${positions.length} extracted…`;
+        } catch(e) { console.warn('Frame capture error', e); }
+        seekFrame(idx + 1);
+      }, 200);
     };
-
     video.addEventListener('seeked', onSeeked, { once: true });
   }
+  if (video.readyState >= 2) seekFrame(0);
+  else video.addEventListener('loadeddata', () => seekFrame(0), { once: true });
+}
 
-  // Make sure video is ready before starting
-  if (video.readyState >= 2) {
-    seekFrame(0);
-  } else {
-    video.addEventListener('loadeddata', () => seekFrame(0), { once: true });
+async function loadPoseModel() {
+  if (_poseModelLoaded) return true;
+  document.getElementById('swingStatus').textContent = '⏳ Loading pose model…';
+  return new Promise(resolve => {
+    const scripts = [
+      'https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js',
+      'https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js',
+    ];
+    let loaded = 0;
+    scripts.forEach(src => {
+      if (document.querySelector(`script[src="${src}"]`)) { loaded++; if(loaded===scripts.length) init(); return; }
+      const s = document.createElement('script');
+      s.src = src; s.crossOrigin = 'anonymous';
+      s.onload = () => { loaded++; if(loaded===scripts.length) init(); };
+      s.onerror = () => resolve(false);
+      document.head.appendChild(s);
+    });
+    function init() {
+      try {
+        _poseDetector = new window.Pose({ locateFile: f => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${f}` });
+        _poseDetector.setOptions({ modelComplexity:1, smoothLandmarks:false, enableSegmentation:false, minDetectionConfidence:0.5, minTrackingConfidence:0.5 });
+        _poseModelLoaded = true;
+        resolve(true);
+      } catch(e) { console.error('Pose init error', e); resolve(false); }
+    }
+  });
+}
+
+async function runPoseOnFrames() {
+  document.getElementById('swingStatus').textContent = '🤖 Running pose detection…';
+  const loaded = await loadPoseModel();
+  if (!loaded || !_poseDetector) {
+    renderFrameStrip(_swingFrames);
+    document.getElementById('swingStatus').textContent = '✅ Frames ready — tap Analyse My Swing';
+    return;
   }
+  for (let i = 0; i < _swingFrames.length; i++) {
+    const frame = _swingFrames[i];
+    document.getElementById('swingStatus').textContent = `🤖 Analysing pose — frame ${i+1} of ${_swingFrames.length}…`;
+    try {
+      const img = new Image();
+      await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = frame.dataUrl; });
+      const landmarks = await new Promise(res => {
+        _poseDetector.onResults(r => res(r.poseLandmarks || null));
+        _poseDetector.send({ image: img });
+      });
+      frame.landmarks = landmarks;
+      frame.overlayDataUrl = landmarks ? drawPoseOverlay(img, landmarks) : frame.dataUrl;
+      frame.scores = landmarks ? scorePoseFrame(landmarks, frame.label) : null;
+    } catch(e) { console.warn('Pose frame error:', e); frame.overlayDataUrl = frame.dataUrl; }
+  }
+  renderFrameStrip(_swingFrames);
+  renderSwingReportCard(_swingFrames);
+  document.getElementById('swingStatus').textContent = '✅ Pose analysis complete — tap Analyse My Swing for full coaching feedback';
+}
+
+function drawPoseOverlay(img, landmarks) {
+  const oc = document.getElementById('swingOverlayCanvas');
+  oc.width = img.naturalWidth || img.width;
+  oc.height = img.naturalHeight || img.height;
+  const ctx = oc.getContext('2d');
+  ctx.drawImage(img, 0, 0);
+  const W = oc.width, H = oc.height;
+  const pt = i => ({ x: landmarks[i].x*W, y: landmarks[i].y*H, v: landmarks[i].visibility });
+  const CONNECTIONS = [[11,12],[11,13],[13,15],[12,14],[14,16],[11,23],[12,24],[23,24],[23,25],[25,27],[24,26],[26,28],[27,29],[27,31],[28,30],[28,32]];
+  const jScores = scoreLandmarks(landmarks);
+  ctx.lineWidth = Math.max(2, W/200);
+  CONNECTIONS.forEach(([a,b]) => {
+    const pA=pt(a), pB=pt(b);
+    if (pA.v<0.3||pB.v<0.3) return;
+    ctx.beginPath(); ctx.moveTo(pA.x,pA.y); ctx.lineTo(pB.x,pB.y);
+    ctx.strokeStyle='rgba(255,255,255,0.55)'; ctx.stroke();
+  });
+  [11,12,13,14,15,16,23,24,25,26,27,28].forEach(i => {
+    const p=pt(i); if(p.v<0.3) return;
+    const s = jScores[i]??0.5;
+    const color = s>=0.75?'#6fcf97':s>=0.5?'#f59e0b':'#f87171';
+    const r = Math.max(5, W/75);
+    ctx.beginPath(); ctx.arc(p.x,p.y,r,0,Math.PI*2);
+    ctx.fillStyle=color; ctx.fill();
+    ctx.strokeStyle='#fff'; ctx.lineWidth=Math.max(1.5,W/280); ctx.stroke();
+  });
+  return oc.toDataURL('image/jpeg', 0.85);
+}
+
+function scoreLandmarks(landmarks) {
+  const scores = {};
+  if (!landmarks?.length) return scores;
+  const lS=landmarks[11],rS=landmarks[12],lH=landmarks[23],rH=landmarks[24];
+  const lK=landmarks[25],rK=landmarks[26],lE=landmarks[13],rE=landmarks[14],lW=landmarks[15],rW=landmarks[16];
+  const sMidY=(lS.y+rS.y)/2, hMidY=(lH.y+rH.y)/2;
+  const spineLen=Math.abs(sMidY-hMidY);
+  const shoulderTilt=Math.abs(lS.y-rS.y)/Math.max(spineLen,0.01);
+  const spineScore=Math.min(1,shoulderTilt*3);
+  const sW=Math.abs(lS.x-rS.x), hW=Math.abs(lH.x-rH.x);
+  const sep=Math.abs(sW-hW)/Math.max(sW,hW,0.01);
+  const rotScore=Math.min(1,sep*2);
+  const kneeScore=(lK.y>lH.y&&rK.y>rH.y)?0.8:0.4;
+  const lArmLen=Math.sqrt((lW.x-lS.x)**2+(lW.y-lS.y)**2);
+  const lUA=Math.sqrt((lE.x-lS.x)**2+(lE.y-lS.y)**2);
+  const lFA=Math.sqrt((lW.x-lE.x)**2+(lW.y-lE.y)**2);
+  const armScore=Math.min(1, lArmLen/Math.max(lUA+lFA,0.01)+0.2);
+  [11,12].forEach(i=>scores[i]=spineScore);
+  [23,24].forEach(i=>scores[i]=rotScore);
+  [25,26].forEach(i=>scores[i]=kneeScore);
+  [13,14,15,16].forEach(i=>scores[i]=armScore);
+  return scores;
+}
+
+function scorePoseFrame(landmarks, label) {
+  if (!landmarks?.length) return null;
+  const lS=landmarks[11],rS=landmarks[12],lH=landmarks[23],rH=landmarks[24];
+  const lK=landmarks[25],rK=landmarks[26],lE=landmarks[13],lW=landmarks[15];
+  const sMX=(lS.x+rS.x)/2,sMY=(lS.y+rS.y)/2,hMX=(lH.x+rH.x)/2,hMY=(lH.y+rH.y)/2;
+  const spineAngle=Math.abs(Math.atan2(hMX-sMX,hMY-sMY)*180/Math.PI);
+  const spineScore=spineAngle>10&&spineAngle<40?Math.min(100,70+spineAngle):Math.max(30,100-Math.abs(spineAngle-25)*2);
+  const sW=Math.abs(lS.x-rS.x),hW=Math.abs(lH.x-rH.x);
+  const turnScore=label==='Top'?Math.min(100,(sW/Math.max(hW,0.01))*80):70;
+  const kneeScore=(lK.y-lH.y>0.05&&rK.y-rH.y>0.05)?Math.min(100,60+(lK.y-lH.y+rK.y-rH.y)*150):40;
+  const hipAngle=Math.abs(Math.atan2(rH.y-lH.y,rH.x-lH.x)*180/Math.PI);
+  const hipScore=label==='Impact'?Math.min(100,50+hipAngle*1.5):70;
+  const lArmExt=Math.sqrt((lW.x-lS.x)**2+(lW.y-lS.y)**2);
+  const armScore=label==='Follow-Through'?Math.min(100,lArmExt*250):70;
+  return {
+    spine: Math.round(Math.max(0,Math.min(100,spineScore))),
+    turn:  Math.round(Math.max(0,Math.min(100,turnScore))),
+    knees: Math.round(Math.max(0,Math.min(100,kneeScore))),
+    hips:  Math.round(Math.max(0,Math.min(100,hipScore))),
+    arms:  Math.round(Math.max(0,Math.min(100,armScore))),
+  };
 }
 
 function renderFrameStrip(frames) {
   const strip = document.getElementById('swingFrameStrip');
-  strip.innerHTML = frames.map(f => `
-    <div style="flex-shrink:0;text-align:center">
-      <img src="${f.dataUrl}" style="width:80px;height:60px;object-fit:cover;border-radius:6px;border:1px solid var(--border);display:block" />
-      <div style="font-size:0.6rem;color:var(--cream-muted);margin-top:0.2rem">${f.label}</div>
-    </div>`).join('');
-  document.getElementById('swingStatus').textContent = `✅ ${frames.length} frames ready — tap Analyse`;
+  strip.innerHTML = frames.map(f => {
+    const src = f.overlayDataUrl || f.dataUrl;
+    const hasPose = !!f.landmarks;
+    return `<div class="swing-frame-item${hasPose?' best':''}">
+      <img src="${src}" style="width:100%;height:55px;object-fit:cover;border-radius:6px;border:2px solid ${hasPose?'rgba(111,207,151,0.5)':'var(--border)'};display:block" />
+      <div class="sf-label">${f.label}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderSwingReportCard(frames) {
+  const card = document.getElementById('swingReportCard');
+  const scored = frames.filter(f => f.scores);
+  if (!scored.length) { card.style.display='none'; return; }
+  const vars = ['spine','turn','knees','hips','arms'];
+  const labels = { spine:'Spine Angle', turn:'Shoulder Turn', knees:'Knee Flex', hips:'Hip Rotation', arms:'Arm Extension' };
+  const avg = {};
+  vars.forEach(v => { const vals=scored.map(f=>f.scores[v]).filter(Boolean); avg[v]=vals.length?Math.round(vals.reduce((a,b)=>a+b,0)/vals.length):0; });
+  const overall = Math.round(Object.values(avg).reduce((a,b)=>a+b,0)/vars.length);
+  const oColor = overall>=75?'#6fcf97':overall>=55?'#f59e0b':'#f87171';
+  const oClass = overall>=75?'green':overall>=55?'yellow':'red';
+  const grade  = overall>=85?'A':overall>=75?'B':overall>=65?'C':overall>=55?'D':'F';
+  card.style.display='block';
+  card.innerHTML=`<div class="swing-report-card">
+    <div class="swing-report-title">📊 Pose Report Card</div>
+    <div style="font-size:0.75rem;color:var(--cream-muted);margin-bottom:1rem">${scored.length} frames analysed · ${_swingClub} · ${_swingAngle}</div>
+    <div class="swing-score-ring">
+      <div class="swing-score-circle ${oClass}"><div class="sc-val">${overall}%</div><div class="sc-lbl">Overall</div></div>
+      <div style="text-align:left">
+        <div style="font-family:'Playfair Display',serif;font-size:2.5rem;color:${oColor};line-height:1">${grade}</div>
+        <div style="font-size:0.7rem;color:var(--cream-muted);text-transform:uppercase;letter-spacing:0.06em">Efficiency Grade</div>
+        <div style="font-size:0.75rem;color:var(--cream-muted);margin-top:0.3rem;max-width:180px">${overall>=75?'Strong mechanics':'Room to improve — see coaching notes'}</div>
+      </div>
+    </div>
+    <div class="swing-variables">
+      ${vars.map(v=>{
+        const s=avg[v]; const color=s>=75?'#6fcf97':s>=55?'#f59e0b':'#f87171';
+        const icon=s>=75?'✅':s>=55?'⚠️':'❌';
+        return `<div class="swing-var-row">
+          <div class="swing-var-name">${icon} ${labels[v]}</div>
+          <div class="swing-var-bar"><div class="swing-var-fill" style="width:${s}%;background:${color}"></div></div>
+          <div class="swing-var-score" style="color:${color}">${s}%</div>
+        </div>`;
+      }).join('')}
+    </div>
+    <div style="font-size:0.72rem;color:var(--cream-muted);padding:0.5rem;background:rgba(0,0,0,0.15);border-radius:6px">
+      🟢 Green joints = good position · 🟡 Amber = needs work · 🔴 Red = priority fix
+    </div>
+  </div>`;
 }
 
 async function runSwingAnalysis() {
   if (!_swingVideoFile) { showToast('Please upload a swing video first'); return; }
   if (!_swingFrames.length) { showToast('Still extracting frames — wait a moment'); return; }
-
-  const focus    = document.getElementById('swingFocusInput')?.value?.trim() || '';
-  const profile  = _currentProfile;
-  const btn      = document.getElementById('swingAnalyseBtn');
-  const statusEl = document.getElementById('swingStatus');
-
-  btn.disabled = true;
+  const focus   = document.getElementById('swingFocusInput')?.value?.trim()||'';
+  const profile = _currentProfile;
+  const btn     = document.getElementById('swingAnalyseBtn');
+  const statusEl= document.getElementById('swingStatus');
+  btn.disabled  = true;
   statusEl.textContent = '⏳ Sending frames to your caddie…';
 
-  // Build image content blocks — one per frame
-  const imageBlocks = _swingFrames.map(f => ({
-    type: 'image',
-    source: {
-      type: 'base64',
-      media_type: 'image/jpeg',
-      data: f.dataUrl.split(',')[1]
-    }
-  }));
+  // Build pose context for AI
+  const scored = _swingFrames.filter(f=>f.scores);
+  let poseCtx = '';
+  if (scored.length) {
+    const vars=['spine','turn','knees','hips','arms'];
+    const lbl={spine:'Spine Angle',turn:'Shoulder Turn',knees:'Knee Flex',hips:'Hip Rotation',arms:'Arm Extension'};
+    const avg={};
+    vars.forEach(v=>{const vals=scored.map(f=>f.scores[v]).filter(Boolean);avg[v]=vals.length?Math.round(vals.reduce((a,b)=>a+b,0)/vals.length):0;});
+    const overall=Math.round(Object.values(avg).reduce((a,b)=>a+b,0)/vars.length);
+    poseCtx=`\nPOSE SCORES (MediaPipe): Overall ${overall}%\n${vars.map(v=>`- ${lbl[v]}: ${avg[v]}%`).join('\n')}\nReference low-scoring areas in your analysis.`;
+  }
 
-  // Add text labels between frames
   const contentBlocks = [];
-  _swingFrames.forEach((f, i) => {
-    contentBlocks.push({ type: 'text', text: `Frame ${i+1} — ${f.label}:` });
-    contentBlocks.push(imageBlocks[i]);
+  _swingFrames.forEach((f,i) => {
+    contentBlocks.push({ type:'text', text:`Frame ${i+1} — ${f.label}:` });
+    contentBlocks.push({ type:'image', source:{ type:'base64', media_type:'image/jpeg', data:(f.overlayDataUrl||f.dataUrl).split(',')[1] }});
   });
 
-  // Golfer context
-  const golferContext = [
-    profile?.handicap_index ? `Handicap: ${profile.handicap_index}` : '',
-    profile?.typical_miss   ? `Typical miss: ${profile.typical_miss}` : '',
-    profile?.ball_flight    ? `Ball flight: ${profile.ball_flight}` : '',
-    profile?.weakest_area   ? `Weakest area: ${profile.weakest_area}` : '',
-    focus ? `Currently working on / struggling with: ${focus}` : '',
-    `Club being swung: ${_swingClub}`,
-    `Camera angle: ${_swingAngle}`,
+  const golferCtx = [
+    profile?.handicap_index?`Handicap: ${profile.handicap_index}`:'',
+    profile?.typical_miss?`Typical miss: ${profile.typical_miss}`:'',
+    profile?.ball_flight?`Ball flight: ${profile.ball_flight}`:'',
+    focus?`Struggling with: ${focus}`:'',
+    `Club: ${_swingClub}`, `Angle: ${_swingAngle}`,
   ].filter(Boolean).join('\n');
 
-  contentBlocks.push({
-    type: 'text',
-    text: `You are an expert PGA teaching professional analysing a golf swing from video frames.
-
-GOLFER PROFILE:
-${golferContext}
-
-The 5 frames above are: Address, Takeaway, Top of Backswing, Impact, and Follow-Through — extracted from a ${_swingAngle} angle video of a ${_swingClub} swing.
-
-Please provide a structured swing analysis:
-
-### 🏌️ Setup & Address
-(Posture, grip appearance, alignment, ball position, stance width — what you can see)
-
-### 🔄 Backswing
-(Takeaway path, shoulder turn, hip rotation, club position at top, any swing plane issues)
-
-### ⚡ Impact & Through-Swing
-(Impact position, body rotation, extension, follow-through — what the frames suggest)
-
-### 🎯 Top 2 Priority Fixes
-(The most impactful changes this golfer should make — be specific, actionable, and direct. Reference what you actually see in the frames.)
-
-### 🏋️ Drill to Fix It
-(One specific drill for each priority fix — name it, explain the setup, and give a rep count)
-
-Be honest and specific. Reference what you actually see in the frames. Note if the camera angle limits what you can assess. Keep it practical — this golfer wants to improve, not just hear generic tips.`
-  });
+  contentBlocks.push({ type:'text', text:`You are a PGA teaching pro analysing a golf swing. Frames: Address, Takeaway, Top, Impact, Follow-Through from ${_swingAngle} angle.\n\nGOLFER:\n${golferCtx}${poseCtx}\n\n### 🏌️ Setup & Address\n### 🔄 Backswing\n### ⚡ Impact & Through-Swing\n### 🎯 Top 2 Priority Fixes\n(Reference pose scores — lowest areas need most work)\n### 🏋️ Drill for Each Fix\n\nBe specific and reference what you see in the frames.` });
 
   const outputEl  = document.getElementById('aiSwingOutput');
   const actionsEl = document.getElementById('aiSwingActions');
-  if (actionsEl) actionsEl.style.display = 'none';
-  outputEl.style.display = 'block';
-  outputEl.innerHTML = `<div class="ai-response-card ai-streaming" id="swingStreamTarget">Your caddie is reviewing your swing…</div>`;
+  if(actionsEl) actionsEl.style.display='none';
+  outputEl.style.display='block';
+  outputEl.innerHTML=`<div class="ai-response-card ai-streaming" id="swingStreamTarget">Your caddie is reviewing your swing…</div>`;
 
   try {
     const response = await fetch('/api/caddie', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 1500,
-        stream: true,
-        messages: [{ role: 'user', content: contentBlocks }]
-      })
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ model:'claude-sonnet-4-6', max_tokens:1500, stream:true, messages:[{role:'user',content:contentBlocks}] })
     });
-
-    if (!response.ok) throw new Error('API error ' + response.status);
-
-    const reader  = response.body.getReader();
-    const decoder = new TextDecoder();
-    const target  = document.getElementById('swingStreamTarget');
-    let fullText  = '';
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      const lines = decoder.decode(value).split('\n').filter(l => l.startsWith('data: '));
-      for (const line of lines) {
+    if (!response.ok) throw new Error('API error '+response.status);
+    const reader=response.body.getReader(), decoder=new TextDecoder();
+    const target=document.getElementById('swingStreamTarget');
+    let fullText='';
+    while(true) {
+      const {done,value}=await reader.read(); if(done) break;
+      decoder.decode(value).split('\n').filter(l=>l.startsWith('data: ')).forEach(line=>{
         try {
-          const d = JSON.parse(line.slice(6));
-          if (d.type === 'content_block_delta' && d.delta?.text) {
-            fullText += d.delta.text;
-            target.innerHTML = renderAiMarkdown(fullText);
-          }
-          if (d.type === 'message_stop') {
-            target.className = 'ai-response-card';
-            if (actionsEl) actionsEl.style.display = 'flex';
-          }
-        } catch(e) {}
-      }
+          const d=JSON.parse(line.slice(6));
+          if(d.type==='content_block_delta'&&d.delta?.text){fullText+=d.delta.text;target.innerHTML=renderAiMarkdown(fullText);}
+          if(d.type==='message_stop'){target.className='ai-response-card';if(actionsEl)actionsEl.style.display='flex';}
+        } catch(e){}
+      });
     }
-    statusEl.textContent = '';
+    statusEl.textContent='';
   } catch(e) {
-    outputEl.innerHTML = `<div class="ai-error">❌ Analysis failed — ${e.message}</div>`;
-    console.error('Swing analysis error:', e);
-  } finally {
-    btn.disabled = false;
-  }
+    outputEl.innerHTML=`<div class="ai-error">❌ Analysis failed — ${e.message}</div>`;
+    console.error('Swing analysis error:',e);
+  } finally { btn.disabled=false; }
 }
 
 // ─────────────────────────────────────
