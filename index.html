@@ -5761,30 +5761,50 @@ async function renderLeaderboard(){
   let rows;
 
   if (groupId) {
-    // Fetch actual group members from Supabase to get their display names
     const grp = _myGroups.find(g => g.id === groupId);
     if (chartTitle) chartTitle.textContent = `Avg Score — ${esc(grp?.name || 'Group')}`;
     try {
       const token = await getAuthToken();
       const hdrs = {...SB_HDR, 'Authorization':'Bearer '+token};
-      const res = await fetch(`${SB_URL}/rest/v1/group_memberships?group_id=eq.${groupId}&select=*,golfer_profiles(display_name,avatar_color,anonymous_id)`, { headers: hdrs });
-      const members = await res.json();
-      // Get display names of all group members
-      const memberNames = (members||[]).map(m => m.golfer_profiles?.display_name).filter(Boolean);
-      if (!memberNames.length) {
+
+      // Step 1: get all members with their user_id and display_name
+      const memRes = await fetch(
+        `${SB_URL}/rest/v1/group_memberships?group_id=eq.${groupId}&select=user_id,golfer_profiles(display_name,avatar_color)`,
+        { headers: hdrs }
+      );
+      const members = await memRes.json();
+      if (!members?.length) {
         el.innerHTML = `<div class="empty-state"><div class="icon">👥</div><p>No members found in this group.</p></div>`;
-        return;
+        document.getElementById('lbChart').innerHTML = ''; return;
       }
-      // Build rows from _rounds matching member names
-      rows = buildLbRows(new Set(memberNames), _rounds);
-      // Add members with no rounds yet as empty rows
-      memberNames.forEach(name => {
-        if (!rows.find(r => r.name === name)) {
-          rows.push({ name, avg: Infinity, best: null, rounds: 0, beers: 0, avgPutts: '—', whs: null });
-        }
+
+      // Step 2: fetch rounds for ALL member user_ids in one query
+      const userIds = members.map(m => m.user_id).filter(Boolean);
+      const inFilter = userIds.map(id => `"${id}"`).join(',');
+      const roundsRes = await fetch(
+        `${SB_URL}/rest/v1/rounds?user_id=in.(${userIds.join(',')})&order=created_at.desc`,
+        { headers: hdrs }
+      );
+      const memberRounds = roundsRes.ok ? await roundsRes.json() : [];
+
+      // Step 3: build rows keyed by user_id → display_name
+      rows = members.map(m => {
+        const name = m.golfer_profiles?.display_name || 'Unknown';
+        const color = m.golfer_profiles?.avatar_color || '#C9A84C';
+        const userRounds = memberRounds.filter(r => r.user_id === m.user_id && r.score > 0);
+        const allUserRounds = memberRounds.filter(r => r.user_id === m.user_id);
+        const avg = userRounds.length ? userRounds.reduce((s,r)=>s+r.score,0)/userRounds.length : Infinity;
+        const best = userRounds.length ? Math.min(...userRounds.map(r=>r.score)) : null;
+        const beers = allUserRounds.reduce((s,r)=>s+(r.beers||0),0);
+        const puttRounds = allUserRounds.filter(r=>r.total_putts>0);
+        const avgPutts = puttRounds.length ? (puttRounds.reduce((s,r)=>s+r.total_putts,0)/puttRounds.length).toFixed(1) : '—';
+        const whs = calcWHS(userRounds)?.hcp ?? null;
+        return { name, color, avg, best, rounds: userRounds.length, beers, avgPutts, whs };
       });
+
     } catch(e) {
-      el.innerHTML = `<div class="empty-state"><div class="icon">⚠️</div><p>Could not load group members.</p></div>`;
+      console.error('Leaderboard load error:', e);
+      el.innerHTML = `<div class="empty-state"><div class="icon">⚠️</div><p>Could not load group data.<br><small style="color:var(--cream-muted)">Check RLS policy on rounds table allows group members to read each other's rounds.</small></p></div>`;
       return;
     }
   } else {
@@ -5808,15 +5828,11 @@ async function renderLeaderboard(){
   const medals = ['🥇','🥈','🥉'];
   const topClass = i => i===0?'top1':i===1?'top2':i===2?'top3':'';
   const rankColor = i => i===0?'var(--gold)':i===1?'#c0c0c0':i===2?'#c87941':'var(--cream-muted)';
-  const avatarColor = name => {
-    const g = _golfers.find(g=>g.name===name);
-    return g?.avatar_color || g?.color || '#C9A84C';
-  };
 
   el.innerHTML = `<div class="lb-list">${rows.map((r,i) => {
     const avgStr = r.avg===Infinity ? '—' : r.avg.toFixed(1);
     const whsStr = r.whs!==null ? (r.whs>0?'+':'')+r.whs : null;
-    const color  = avatarColor(r.name);
+    const color = r.color || (_golfers.find(g=>g.name===r.name)?.avatar_color) || '#C9A84C';
     return `<div class="lb-card ${topClass(i)}">
       <div class="lb-rank" style="color:${rankColor(i)}">${medals[i]||i+1}</div>
       <div class="lb-avatar" style="background:${color}">${esc(r.name).charAt(0).toUpperCase()}</div>
