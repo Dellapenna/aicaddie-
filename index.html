@@ -3599,7 +3599,7 @@ async function downloadSwingPDF() {
   doc.setFontSize(20);
   doc.setFont('helvetica', 'bold');
   doc.text('The Caddie', margin, 12);
-  doc.setFontSize(9);
+  doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(220, 210, 190);
   doc.text('Swing Analysis Report', margin, 18);
@@ -3641,7 +3641,7 @@ async function downloadSwingPDF() {
     doc.setTextColor(overall>=75?111:overall>=55?245:248, overall>=75?207:overall>=55?158:113, overall>=75?151:overall>=55?11:113);
     doc.text(grade, margin + 48, cy + 6);
 
-    doc.setFontSize(9); doc.setFont('helvetica','normal');
+    doc.setFontSize(10); doc.setFont('helvetica','normal');
     doc.setTextColor(60, 60, 60);
     doc.text('Efficiency Grade', margin + 48, cy + 11);
 
@@ -3674,73 +3674,98 @@ async function downloadSwingPDF() {
     y += 70;
   }
 
-  // ── Frames with overlays ──
+  // ── Frames with overlays — 3 on top row, 2 on bottom ──
   doc.setTextColor(139, 90, 20);
-  doc.setFontSize(11); doc.setFont('helvetica','bold');
+  doc.setFontSize(13); doc.setFont('helvetica','bold');
   doc.text('Swing Frames — Pose Overlay', margin, y);
-  y += 5;
+  y += 6;
 
-  const frameW = (contentW - 8) / 5;
-  const frameH = frameW * 0.75;
   const validFrames = _swingFrames.filter(f => f.dataUrl);
+  const cols = 3;
+  const frameGap = 4;
+  const frameW = (contentW - frameGap * (cols - 1)) / cols;
+  const frameH = frameW * (9/16); // 16:9 ratio
 
   for (let i = 0; i < validFrames.length; i++) {
     const f = validFrames[i];
     const src = f.overlayDataUrl || f.dataUrl;
-    const x = margin + i * (frameW + 2);
+    const col = i % cols;
+    const row = Math.floor(i / cols);
+    const x = margin + col * (frameW + frameGap);
+    const fy = y + row * (frameH + 10);
     try {
-      doc.addImage(src, 'JPEG', x, y, frameW, frameH);
-      // Label
-      doc.setFontSize(6); doc.setFont('helvetica','bold');
-      doc.setTextColor(f.landmarks ? 30 : 80, f.landmarks ? 120 : 80, f.landmarks ? 70 : 80);
-      doc.text(f.label, x + frameW/2, y + frameH + 3.5, { align:'center' });
-      // Green border if pose detected
+      doc.addImage(src, 'JPEG', x, fy, frameW, frameH);
+      // Label below frame
+      doc.setFontSize(8); doc.setFont('helvetica','bold');
+      doc.setTextColor(f.landmarks ? 30 : 70, f.landmarks ? 120 : 70, f.landmarks ? 70 : 70);
+      doc.text(f.label, x + frameW/2, fy + frameH + 4.5, { align:'center' });
+      // Score badge if available
+      if (f.scores) {
+        const frameOverall = Math.round(Object.values(f.scores).reduce((a,b)=>a+b,0)/Object.keys(f.scores).length);
+        const bc = frameOverall>=75?[111,207,151]:frameOverall>=55?[245,158,11]:[248,113,113];
+        doc.setFillColor(...bc);
+        doc.roundedRect(x + frameW - 14, fy + 2, 12, 6, 1, 1, 'F');
+        doc.setFontSize(6); doc.setFont('helvetica','bold');
+        doc.setTextColor(255, 255, 255);
+        doc.text(`${frameOverall}%`, x + frameW - 8, fy + 6.2, { align:'center' });
+      }
+      // Border
       if (f.landmarks) {
         doc.setDrawColor(111, 207, 151);
-        doc.setLineWidth(0.4);
-        doc.rect(x, y, frameW, frameH, 'S');
+        doc.setLineWidth(0.5);
+        doc.rect(x, fy, frameW, frameH, 'S');
       }
     } catch(e) { console.warn('Frame image error:', e); }
   }
-  y += frameH + 8;
+
+  const rows = Math.ceil(validFrames.length / cols);
+  y += rows * (frameH + 10) + 4;
 
   // Legend
-  doc.setFontSize(6.5); doc.setFont('helvetica','normal');
+  doc.setFontSize(8); doc.setFont('helvetica','normal');
   doc.setTextColor(60, 60, 60);
-  doc.text('🟢 Green joints = good position  ·  🟡 Amber = needs attention  ·  🔴 Red = priority fix  ·  Green frame border = pose detected', margin, y);
-  y += 6;
+  doc.text('Green border = pose detected   Green badge = good (75%+)   Amber = needs work   Red = priority fix', margin, y);
+  y += 8;
 
   // ── AI Coaching Text ──
   const aiEl = document.getElementById('aiSwingOutput');
   const aiText = aiEl ? (aiEl.innerText || aiEl.textContent || '') : '';
   if (aiText.trim()) {
+    if (y > H - 60) { doc.addPage(); y = margin; }
+
     // Divider
-    doc.setDrawColor(201, 168, 76);
-    doc.setLineWidth(0.3);
+    doc.setDrawColor(180, 140, 50);
+    doc.setLineWidth(0.5);
     doc.line(margin, y, W - margin, y);
-    y += 5;
+    y += 7;
 
     doc.setTextColor(139, 90, 20);
-    doc.setFontSize(11); doc.setFont('helvetica','bold');
+    doc.setFontSize(14); doc.setFont('helvetica','bold');
     doc.text('Caddie Coaching Notes', margin, y);
-    y += 6;
+    y += 8;
 
-    doc.setTextColor(30, 30, 30);
-    doc.setFontSize(8.5); doc.setFont('helvetica','normal');
+    doc.setTextColor(20, 20, 20);
+    doc.setFontSize(10); doc.setFont('helvetica','normal');
     const lines = doc.splitTextToSize(aiText.replace(/[^\x00-\x7E]/g, '').trim(), contentW);
     lines.forEach(line => {
-      if (y > H - margin - 8) { doc.addPage(); y = margin; }
-      // Style headings
-      if (line.trim().startsWith('###') || /^[A-Z].{0,40}$/.test(line.trim()) && line.length < 45) {
+      if (y > H - margin - 12) { doc.addPage(); y = margin + 5; }
+      const trimmed = line.trim();
+      if (trimmed.startsWith('###') || trimmed.startsWith('##') || trimmed.startsWith('#')) {
+        y += 3;
         doc.setFont('helvetica','bold');
-        doc.setTextColor(201, 168, 76);
-        doc.text(line.replace(/#+\s*/,''), margin, y);
+        doc.setFontSize(11);
+        doc.setTextColor(139, 90, 20);
+        doc.text(trimmed.replace(/#+\s*/,''), margin, y);
         doc.setFont('helvetica','normal');
-        doc.setTextColor(30, 30, 30);
+        doc.setFontSize(10);
+        doc.setTextColor(20, 20, 20);
+        y += 6;
+      } else if (trimmed.length === 0) {
+        y += 2;
       } else {
         doc.text(line, margin, y);
+        y += 5.5;
       }
-      y += 4.5;
     });
   }
 
@@ -3750,10 +3775,10 @@ async function downloadSwingPDF() {
     doc.setPage(p);
     doc.setFillColor(10, 31, 20);
     doc.rect(0, H - 10, W, 10, 'F');
-    doc.setFontSize(6.5); doc.setFont('helvetica','normal');
-    doc.setTextColor(60, 60, 60);
-    doc.text('The Caddie · aicaddie.netlify.app', margin, H - 4);
-    doc.text(`Page ${p} of ${pageCount}`, W - margin, H - 4, { align:'right' });
+    doc.setFontSize(7.5); doc.setFont('helvetica','normal');
+    doc.setTextColor(200, 200, 200);
+    doc.text('The Caddie · aicaddie.netlify.app', margin, H - 3.5);
+    doc.text(`Page ${p} of ${pageCount}`, W - margin, H - 3.5, { align:'right' });
   }
 
   const fileName = `swing_analysis_${_swingClub.toLowerCase()}_${new Date().toISOString().slice(0,10)}.pdf`;
