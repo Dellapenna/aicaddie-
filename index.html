@@ -4180,9 +4180,10 @@ async function addGolfer(){
   if(!name){showToast('Enter a golfer name first!');return;}
   if(_golfers.find(g=>g.name.toLowerCase()===name.toLowerCase())){showToast('That golfer already exists.');return;}
   try{
-    const saved = await sbInsert('golfers',{id:Date.now(),name,handicap:hcp,gender});
-    const newGolfer = Array.isArray(saved)?saved[0]:saved;
-    if(newGolfer) _golfers.unshift(newGolfer);
+    await sbInsert('golfers',{id:Date.now(),name,handicap:hcp,gender});
+    // Reload golfers from Supabase since insert returns no content
+    const uid = _currentUser?.id;
+    _golfers = await sbGet('golfers', uid ? `user_id=eq.${uid}` : '');
     refreshGolferDropdowns();
     renderGolferRoster();
     document.getElementById('newGolferName').value='';
