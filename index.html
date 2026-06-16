@@ -801,7 +801,6 @@ nav { padding: 0.8rem 1rem !important; }
       <button class="more-item" onclick="showPage('leaderboard',null);toggleMoreMenu()"><span>🏆</span> Board</button>
       <button class="more-item" onclick="showPage('history',null);toggleMoreMenu()"><span>📋</span> History</button>
       <button class="more-item" onclick="showPage('stats',null);toggleMoreMenu()"><span>📊</span> Stats</button>
-      <button class="more-item" onclick="showPage('golfers',null);toggleMoreMenu()"><span>👤</span> Golfers</button>
       <button class="more-item" onclick="showPage('groups',null);toggleMoreMenu()"><span>👥</span> Groups</button>
       <button class="more-item" onclick="showPage('cartgirl',null);toggleMoreMenu()"><span>🍺</span> Cart Girl</button>
       <button class="more-item" onclick="showPage('games',null);toggleMoreMenu()"><span>🎮</span> Games</button>
@@ -1695,9 +1694,41 @@ nav { padding: 0.8rem 1rem !important; }
         </div>
       </div>
 
+      <!-- PLAYING PARTNERS -->
+      <div class="expand-card" id="expandPlayingPartners">
+        <div class="expand-header" onclick="toggleExpand('expandPlayingPartners')">
+          <div class="expand-title">👥 Playing Partners</div>
+          <span class="expand-chevron">▼</span>
+        </div>
+        <div class="expand-body" style="padding:1.25rem">
+          <p style="font-size:0.82rem;color:var(--cream-muted);margin-bottom:1rem">Add people you regularly play with who don't have the app — they'll appear in your golfer selector when logging rounds.</p>
+          <div style="display:flex;gap:0.75rem;flex-wrap:wrap;align-items:flex-end;margin-bottom:1rem">
+            <div class="form-group" style="margin:0;flex:1;min-width:140px">
+              <label>Name</label>
+              <input type="text" id="newGolferName" placeholder="e.g. Dad, Mike" maxlength="30" />
+            </div>
+            <div class="form-group" style="margin:0;max-width:110px">
+              <label>Starting HCP</label>
+              <input type="number" id="newGolferHcp" placeholder="0" min="-10" max="54" />
+            </div>
+            <div class="form-group" style="margin:0;max-width:100px">
+              <label>Gender</label>
+              <select id="newGolferGender">
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+              </select>
+            </div>
+            <button class="btn btn-gold btn-sm" onclick="addGolfer()">➕ Add</button>
+          </div>
+          <div id="golferRoster"></div>
+        </div>
+      </div>
+
     </div>
   </div>
 
+  <!-- GOLFERS PAGE (hidden — functionality moved to Profile) -->
+  <div id="page-golfers" class="page" style="display:none!important"></div>
 
   <!-- CART GIRL -->
   <div id="page-cartgirl" class="page">
@@ -3400,7 +3431,7 @@ function showPage(name,btn){
   if(name==='clubs'){ loadBag().then(()=>renderClubs()); }
   if(name==='analytics'){syncAnalyticsFilter();renderAnalytics();}
   if(name==='groups')renderGroupsPage();
-  if(name==='profile')renderProfilePage();
+  if(name==='profile'){ renderProfilePage(); renderGolferRoster(); }
   if(name==='admin')loadAdminData();
   if(name==='cartgirl')loadCartGirlSightings();
   if(name==='games')renderGamesPage();
@@ -4228,16 +4259,23 @@ function toggleCondPill(pill) {
 }
 function renderGolferRoster(){
   const el=document.getElementById('golferRoster');
-  if(!_golfers.length){el.innerHTML=`<div class="empty-state" style="padding:2rem"><div class="icon">👤</div><p>No golfers yet.</p></div>`;return;}
-  el.innerHTML=`<table class="leaderboard-table"><thead><tr><th>Name</th><th>Gender</th><th>Starting HCP</th><th>WHS HCP</th><th>Rounds</th><th></th></tr></thead><tbody>
-    ${_golfers.map(g=>{
-      const gr=_rounds.filter(r=>r.golfer===g.name);
-      const whs=calcWHS(gr);
-      const whsDisplay=whs?`<span style="color:#6ea8f7;font-weight:600">${whs.hcp>0?'+':''}${whs.hcp}</span>`:`<span style="color:var(--cream-muted);font-size:0.75rem">${gr.length<3?`need ${3-gr.length} more`:'—'}</span>`;
-      const genderIcon=g.gender==='female'?'♀':'♂';return `<tr><td class="golfer-name-cell">${esc(g.name)}</td><td style="color:var(--cream-muted)">${genderIcon} ${g.gender||'—'}</td><td>${g.handicap>=0?'+':''}${g.handicap}</td><td>${whsDisplay}</td><td>${gr.length}</td><td><button class="btn btn-outline btn-sm" onclick="removeGolfer(${g.id})">✕</button></td></tr>`;
-    }).join('')}
-  </tbody></table>
-  <p style="font-size:0.72rem;color:var(--cream-muted);margin-top:1rem">WHS HCP requires rounds with slope & rating data (via course search). Best differentials from last 20 rounds × 0.96.</p>`;
+  if(!el) return;
+  if(!_golfers.length){
+    el.innerHTML=`<div style="color:var(--cream-muted);font-size:0.82rem;padding:0.5rem 0">No playing partners added yet.</div>`;
+    return;
+  }
+  el.innerHTML=_golfers.map(g=>{
+    const gr=_rounds.filter(r=>r.golfer===g.name);
+    const whs=calcWHS(gr);
+    const whsDisplay=whs?`<span style="color:#6ea8f7;font-weight:600">${whs.hcp>0?'+':''}${whs.hcp}</span>`:`<span style="color:var(--cream-muted);font-size:0.75rem">${gr.length<3?`need ${3-gr.length} more`:'—'}</span>`;
+    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:0.65rem 0;border-bottom:1px solid var(--border)">
+      <div>
+        <div style="font-weight:600;font-size:0.88rem">${esc(g.name)}</div>
+        <div style="font-size:0.72rem;color:var(--cream-muted);margin-top:0.1rem">${g.gender||'—'} · HCP ${g.handicap>=0?'+':''}${g.handicap} · ${gr.length} rounds · WHS: ${whsDisplay}</div>
+      </div>
+      <button class="btn btn-outline btn-sm" style="padding:0.2rem 0.5rem;color:#f87171;border-color:rgba(248,113,113,0.3)" onclick="removeGolfer(${g.id})">✕</button>
+    </div>`;
+  }).join('') + `<p style="font-size:0.7rem;color:var(--cream-muted);margin-top:0.75rem">WHS requires rounds with slope & rating data. Best differentials × 0.96.</p>`;
 }
 
 // ─────────────────────────────────────
