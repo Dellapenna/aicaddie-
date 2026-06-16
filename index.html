@@ -1982,6 +1982,7 @@ nav { padding: 0.8rem 1rem !important; }
         <button class="ai-mode-btn"        id="aiMode-chat"     onclick="switchAiMode('chat')">💬 Ask Caddie</button>
         <button class="ai-mode-btn"        id="aiMode-preround" onclick="switchAiMode('preround')">⛳ Pre-Round</button>
         <button class="ai-mode-btn"        id="aiMode-range"    onclick="switchAiMode('range')">🏌️ Range</button>
+        <button class="ai-mode-btn"        id="aiMode-swing"    onclick="switchAiMode('swing')">🎥 Swing</button>
       </div>
 
       <!-- DEBRIEF MODE -->
@@ -2185,6 +2186,69 @@ nav { padding: 0.8rem 1rem !important; }
         <div id="aiRangeActions" style="display:none;gap:0.75rem;flex-wrap:wrap;justify-content:flex-end;margin-top:0.5rem">
           <button class="btn btn-outline btn-sm" onclick="downloadDebrief('range')">⬇️ Download Plan</button>
           <button class="btn btn-outline btn-sm" onclick="printDebrief('range')">🖨️ Print Plan</button>
+        </div>
+      </div>
+
+      <!-- SWING ANALYSIS MODE -->
+      <div class="ai-mode-panel" id="aiPanel-swing" style="display:none">
+        <div class="card" style="border-color:rgba(96,165,250,0.25)">
+          <div class="card-title" style="color:#60a5fa">🎥 Swing Analysis</div>
+          <p style="font-size:0.85rem;color:var(--cream-muted);margin-bottom:1.25rem">Upload a short swing video and your caddie will analyse your setup, backswing, impact position, and follow-through — then tell you exactly what to work on.</p>
+
+          <!-- Video upload -->
+          <div id="swingUploadArea" style="margin-bottom:1rem">
+            <div class="photo-drop" id="swingDrop" onclick="document.getElementById('swingVideoInput').click()" style="cursor:pointer;border-color:rgba(96,165,250,0.3)">
+              <input type="file" id="swingVideoInput" accept="video/*" style="display:none" onchange="onSwingVideoSelected(event)" />
+              <div class="drop-label">🎥 <strong>Tap to upload swing video</strong><br><span style="font-size:0.75rem;color:var(--cream-muted);margin-top:0.3rem;display:block">Face-on or down-the-line · MP4, MOV · Max 100MB</span></div>
+            </div>
+          </div>
+
+          <!-- Video preview + frame strip -->
+          <div id="swingPreviewArea" style="display:none;margin-bottom:1rem">
+            <video id="swingVideo" style="width:100%;border-radius:10px;border:1px solid var(--border);max-height:220px;object-fit:contain;background:#000" playsinline controls></video>
+            <div style="margin-top:0.75rem">
+              <div style="font-size:0.72rem;font-weight:600;color:var(--cream-muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.4rem">Extracted Frames</div>
+              <div id="swingFrameStrip" style="display:flex;gap:0.4rem;overflow-x:auto;padding-bottom:0.25rem"></div>
+            </div>
+            <button class="btn btn-outline btn-sm" style="margin-top:0.75rem" onclick="clearSwingVideo()">✕ Remove Video</button>
+          </div>
+
+          <!-- Angle -->
+          <div style="margin-bottom:1rem">
+            <label style="font-size:0.75rem;font-weight:600;color:var(--cream-muted);text-transform:uppercase;letter-spacing:0.06em;display:block;margin-bottom:0.5rem">Camera Angle</label>
+            <div style="display:flex;gap:0.4rem;flex-wrap:wrap" id="swingAnglePills">
+              <div class="cond-pill selected" data-val="face-on" onclick="toggleSwingPill(this,'swingAnglePills')">🎥 Face-On</div>
+              <div class="cond-pill" data-val="down-the-line" onclick="toggleSwingPill(this,'swingAnglePills')">🎥 Down-the-Line</div>
+              <div class="cond-pill" data-val="unknown" onclick="toggleSwingPill(this,'swingAnglePills')">❓ Not Sure</div>
+            </div>
+          </div>
+
+          <!-- Club -->
+          <div style="margin-bottom:1rem">
+            <label style="font-size:0.75rem;font-weight:600;color:var(--cream-muted);text-transform:uppercase;letter-spacing:0.06em;display:block;margin-bottom:0.5rem">Club Being Swung</label>
+            <div style="display:flex;gap:0.4rem;flex-wrap:wrap" id="swingClubPills">
+              <div class="cond-pill selected" data-val="Driver" onclick="toggleSwingPill(this,'swingClubPills')">🏌️ Driver</div>
+              <div class="cond-pill" data-val="Iron" onclick="toggleSwingPill(this,'swingClubPills')">⛳ Iron</div>
+              <div class="cond-pill" data-val="Wedge" onclick="toggleSwingPill(this,'swingClubPills')">🎯 Wedge</div>
+              <div class="cond-pill" data-val="Fairway Wood" onclick="toggleSwingPill(this,'swingClubPills')">🌲 Wood</div>
+              <div class="cond-pill" data-val="Putter" onclick="toggleSwingPill(this,'swingClubPills')">🟣 Putter</div>
+            </div>
+          </div>
+
+          <!-- Focus -->
+          <div class="form-group" style="margin-bottom:1.25rem">
+            <label>What are you working on or struggling with?</label>
+            <input type="text" id="swingFocusInput" placeholder="e.g. coming over the top, losing distance, inconsistent contact…" />
+          </div>
+
+          <canvas id="swingCanvas" style="display:none"></canvas>
+          <button class="btn btn-ai" id="swingAnalyseBtn" style="width:100%;justify-content:center;background:linear-gradient(135deg,#1e3a5f,#2a5298);border-color:#60a5fa;color:#60a5fa" onclick="runSwingAnalysis()">🎥 Analyse My Swing</button>
+          <div id="swingStatus" style="font-size:0.78rem;color:var(--cream-muted);text-align:center;margin-top:0.5rem;min-height:1.2rem"></div>
+        </div>
+        <div id="aiSwingOutput" style="display:none"></div>
+        <div id="aiSwingActions" style="display:none;gap:0.75rem;flex-wrap:wrap;justify-content:flex-end;margin-top:0.5rem">
+          <button class="btn btn-outline btn-sm" onclick="downloadDebrief('swing')">⬇️ Download Analysis</button>
+          <button class="btn btn-outline btn-sm" onclick="printDebrief('swing')">🖨️ Print Analysis</button>
         </div>
       </div>
 
@@ -3087,6 +3151,217 @@ Be extremely specific. Reference their actual stats. Name the drills. Give exact
   if (actionsEl) actionsEl.style.display = 'none';
   const text = await callCaddieStreaming([{ role:'user', content: prompt }], outputEl);
   if (text && actionsEl) actionsEl.style.display = 'flex';
+}
+
+// ─────────────────────────────────────
+//  SWING ANALYSIS
+// ─────────────────────────────────────
+let _swingVideoFile = null;
+let _swingFrames    = []; // array of base64 jpeg strings
+let _swingAngle     = 'face-on';
+let _swingClub      = 'Driver';
+
+function toggleSwingPill(pill, groupId) {
+  document.querySelectorAll(`#${groupId} .cond-pill`).forEach(p => p.classList.remove('selected'));
+  pill.classList.add('selected');
+  if (groupId === 'swingAnglePills') _swingAngle = pill.dataset.val;
+  if (groupId === 'swingClubPills')  _swingClub  = pill.dataset.val;
+}
+
+function onSwingVideoSelected(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  if (file.size > 100 * 1024 * 1024) { showToast('Video too large — max 100MB'); return; }
+  _swingVideoFile = file;
+  const url = URL.createObjectURL(file);
+  const video = document.getElementById('swingVideo');
+  video.src = url;
+  document.getElementById('swingUploadArea').style.display = 'none';
+  document.getElementById('swingPreviewArea').style.display = 'block';
+  document.getElementById('swingStatus').textContent = '';
+  // Extract frames once metadata loads
+  video.onloadedmetadata = () => extractSwingFrames(video);
+}
+
+function clearSwingVideo() {
+  _swingVideoFile = null;
+  _swingFrames = [];
+  const video = document.getElementById('swingVideo');
+  video.src = '';
+  document.getElementById('swingVideoInput').value = '';
+  document.getElementById('swingUploadArea').style.display = 'block';
+  document.getElementById('swingPreviewArea').style.display = 'none';
+  document.getElementById('swingFrameStrip').innerHTML = '';
+  document.getElementById('swingStatus').textContent = '';
+}
+
+function extractSwingFrames(video) {
+  const canvas = document.getElementById('swingCanvas');
+  const ctx = canvas.getContext('2d');
+  const duration = video.duration;
+  const frameCount = 5;
+  const labels = ['Address', 'Takeaway', 'Top', 'Impact', 'Follow-Through'];
+  const positions = [0.05, 0.25, 0.5, 0.72, 0.92]; // % through video
+
+  _swingFrames = [];
+  const strip = document.getElementById('swingFrameStrip');
+  strip.innerHTML = '<span style="font-size:0.75rem;color:var(--cream-muted)">Extracting frames…</span>';
+
+  let extracted = 0;
+  const frameData = new Array(frameCount);
+
+  positions.forEach((pos, i) => {
+    const t = pos * duration;
+    const tmpVideo = document.createElement('video');
+    tmpVideo.src = video.src;
+    tmpVideo.muted = true;
+    tmpVideo.currentTime = t;
+    tmpVideo.onloadeddata = () => {};
+    tmpVideo.onseeked = () => {
+      canvas.width  = Math.min(tmpVideo.videoWidth,  640);
+      canvas.height = Math.min(tmpVideo.videoHeight, 480);
+      ctx.drawImage(tmpVideo, 0, 0, canvas.width, canvas.height);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+      frameData[i] = { label: labels[i], dataUrl };
+      extracted++;
+      if (extracted === frameCount) {
+        _swingFrames = frameData;
+        renderFrameStrip(frameData);
+      }
+    };
+    setTimeout(() => { tmpVideo.currentTime = t; }, i * 200);
+  });
+}
+
+function renderFrameStrip(frames) {
+  const strip = document.getElementById('swingFrameStrip');
+  strip.innerHTML = frames.map(f => `
+    <div style="flex-shrink:0;text-align:center">
+      <img src="${f.dataUrl}" style="width:80px;height:60px;object-fit:cover;border-radius:6px;border:1px solid var(--border);display:block" />
+      <div style="font-size:0.6rem;color:var(--cream-muted);margin-top:0.2rem">${f.label}</div>
+    </div>`).join('');
+  document.getElementById('swingStatus').textContent = `✅ ${frames.length} frames ready — tap Analyse`;
+}
+
+async function runSwingAnalysis() {
+  if (!_swingVideoFile) { showToast('Please upload a swing video first'); return; }
+  if (!_swingFrames.length) { showToast('Still extracting frames — wait a moment'); return; }
+
+  const focus    = document.getElementById('swingFocusInput')?.value?.trim() || '';
+  const profile  = _currentProfile;
+  const btn      = document.getElementById('swingAnalyseBtn');
+  const statusEl = document.getElementById('swingStatus');
+
+  btn.disabled = true;
+  statusEl.textContent = '⏳ Sending frames to your caddie…';
+
+  // Build image content blocks — one per frame
+  const imageBlocks = _swingFrames.map(f => ({
+    type: 'image',
+    source: {
+      type: 'base64',
+      media_type: 'image/jpeg',
+      data: f.dataUrl.split(',')[1]
+    }
+  }));
+
+  // Add text labels between frames
+  const contentBlocks = [];
+  _swingFrames.forEach((f, i) => {
+    contentBlocks.push({ type: 'text', text: `Frame ${i+1} — ${f.label}:` });
+    contentBlocks.push(imageBlocks[i]);
+  });
+
+  // Golfer context
+  const golferContext = [
+    profile?.handicap_index ? `Handicap: ${profile.handicap_index}` : '',
+    profile?.typical_miss   ? `Typical miss: ${profile.typical_miss}` : '',
+    profile?.ball_flight    ? `Ball flight: ${profile.ball_flight}` : '',
+    profile?.weakest_area   ? `Weakest area: ${profile.weakest_area}` : '',
+    focus ? `Currently working on / struggling with: ${focus}` : '',
+    `Club being swung: ${_swingClub}`,
+    `Camera angle: ${_swingAngle}`,
+  ].filter(Boolean).join('\n');
+
+  contentBlocks.push({
+    type: 'text',
+    text: `You are an expert PGA teaching professional analysing a golf swing from video frames.
+
+GOLFER PROFILE:
+${golferContext}
+
+The 5 frames above are: Address, Takeaway, Top of Backswing, Impact, and Follow-Through — extracted from a ${_swingAngle} angle video of a ${_swingClub} swing.
+
+Please provide a structured swing analysis:
+
+### 🏌️ Setup & Address
+(Posture, grip appearance, alignment, ball position, stance width — what you can see)
+
+### 🔄 Backswing
+(Takeaway path, shoulder turn, hip rotation, club position at top, any swing plane issues)
+
+### ⚡ Impact & Through-Swing
+(Impact position, body rotation, extension, follow-through — what the frames suggest)
+
+### 🎯 Top 2 Priority Fixes
+(The most impactful changes this golfer should make — be specific, actionable, and direct. Reference what you actually see in the frames.)
+
+### 🏋️ Drill to Fix It
+(One specific drill for each priority fix — name it, explain the setup, and give a rep count)
+
+Be honest and specific. Reference what you actually see in the frames. Note if the camera angle limits what you can assess. Keep it practical — this golfer wants to improve, not just hear generic tips.`
+  });
+
+  const outputEl  = document.getElementById('aiSwingOutput');
+  const actionsEl = document.getElementById('aiSwingActions');
+  if (actionsEl) actionsEl.style.display = 'none';
+  outputEl.style.display = 'block';
+  outputEl.innerHTML = `<div class="ai-response-card ai-streaming" id="swingStreamTarget">Your caddie is reviewing your swing…</div>`;
+
+  try {
+    const response = await fetch('/api/caddie', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 1500,
+        stream: true,
+        messages: [{ role: 'user', content: contentBlocks }]
+      })
+    });
+
+    if (!response.ok) throw new Error('API error ' + response.status);
+
+    const reader  = response.body.getReader();
+    const decoder = new TextDecoder();
+    const target  = document.getElementById('swingStreamTarget');
+    let fullText  = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      const lines = decoder.decode(value).split('\n').filter(l => l.startsWith('data: '));
+      for (const line of lines) {
+        try {
+          const d = JSON.parse(line.slice(6));
+          if (d.type === 'content_block_delta' && d.delta?.text) {
+            fullText += d.delta.text;
+            target.innerHTML = renderAiMarkdown(fullText);
+          }
+          if (d.type === 'message_stop') {
+            target.className = 'ai-response-card';
+            if (actionsEl) actionsEl.style.display = 'flex';
+          }
+        } catch(e) {}
+      }
+    }
+    statusEl.textContent = '';
+  } catch(e) {
+    outputEl.innerHTML = `<div class="ai-error">❌ Analysis failed — ${e.message}</div>`;
+    console.error('Swing analysis error:', e);
+  } finally {
+    btn.disabled = false;
+  }
 }
 
 // ─────────────────────────────────────
@@ -5599,12 +5874,14 @@ Be hyper-specific to my actual stats, typical miss, and bag distances. Factor in
 }
 
 function getAiOutputText(mode) {
+  if (mode === 'swing')   return document.getElementById('aiSwingOutput')?.innerHTML || '';
   if (mode === 'range')   return document.getElementById('aiRangeOutput')?.innerHTML || '';
   if (mode === 'debrief') return document.getElementById('aiDebriefOutput')?.innerHTML || '';
   return document.getElementById('aiPreRoundOutput')?.innerHTML || '';
 }
 
 function getAiOutputTitle(mode) {
+  if (mode === 'swing')   return 'Swing Analysis — ' + (_swingClub || 'Driver') + ' · ' + (_swingAngle || 'Face-On');
   if (mode === 'range') {
     const focus = Array.isArray(_rangePills['rangeFocusPills']) && _rangePills['rangeFocusPills'].length
       ? _rangePills['rangeFocusPills'][0] : 'Practice';
