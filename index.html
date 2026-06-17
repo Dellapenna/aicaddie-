@@ -216,11 +216,11 @@ table.scorecard { width:100%; border-collapse:collapse; font-size:0.82rem; }
 /* ── Chip character ── */
 .chip-avatar { display:inline-block; transition:transform 0.3s; }
 .chip-avatar:hover { transform:scale(1.05); }
+.chip-avatar img { display:block; }
 .chip-bubble { background:rgba(255,255,255,0.08); border:1px solid rgba(201,168,76,0.3); border-radius:12px 12px 12px 2px; padding:0.5rem 0.85rem; font-size:0.82rem; color:var(--cream); font-style:italic; max-width:220px; line-height:1.5; }
-.chip-header { display:flex; align-items:center; gap:1rem; padding:0.75rem 0 1rem; }
+.chip-header { display:flex; align-items:center; gap:1rem; padding:0.5rem 0 1rem; }
 .chip-thinking { animation:chipBob 0.6s ease-in-out infinite alternate; }
-@keyframes chipBob { from{transform:translateY(0)} to{transform:translateY(-4px)} }
-@keyframes chipWink { 0%,90%,100%{transform:scaleY(1)} 95%{transform:scaleY(0.1)} }
+@keyframes chipBob { from{transform:translateY(0)} to{transform:translateY(-5px)} }
 @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
 .ai-chat-bubble { padding:0.75rem 1rem; border-radius:12px; font-size:0.85rem; line-height:1.6; max-width:92%; }
 .ai-chat-user { background:rgba(201,168,76,0.12); border:1px solid rgba(201,168,76,0.2); align-self:flex-end; color:var(--cream); }
@@ -827,7 +827,7 @@ nav { padding: 0.8rem 1rem !important; }
       <span class="btab-icon">🏌️</span><span class="btab-label">Clubs</span>
     </button>
     <button class="btab" id="btab-ai" onclick="showPage('ai',this)">
-      <span class="btab-icon" style="font-size:0.9rem;line-height:1.2">🏌️</span><span class="btab-label small">Chip</span>
+      <span class="btab-icon"><img src="/chip-icon.png" alt="Chip" style="width:24px;height:24px;object-fit:contain;vertical-align:middle;margin-top:-2px" /></span><span class="btab-label small">Chip</span>
     </button>
     <button class="btab" id="btab-analytics" onclick="showPage('analytics',this)">
       <span class="btab-icon">📈</span><span class="btab-label">Analytics</span>
@@ -3085,91 +3085,18 @@ async function renderNational() {
 // ─────────────────────────────────────
 //  CHIP — AI Caddie Character
 // ─────────────────────────────────────
-function chipSVG(expression='happy', size=60) {
-  const expressions = {
-    happy: {
-      eyes: `<ellipse cx="38" cy="42" rx="5" ry="5.5" fill="#1a1a1a"/>
-             <ellipse cx="62" cy="42" rx="5" ry="5.5" fill="#1a1a1a"/>
-             <ellipse cx="39.5" cy="40" rx="2" ry="2" fill="#fff" opacity="0.7"/>
-             <ellipse cx="63.5" cy="40" rx="2" ry="2" fill="#fff" opacity="0.7"/>`,
-      mouth: `<path d="M36 58 Q50 70 64 58" stroke="#1a1a1a" stroke-width="2.5" fill="none" stroke-linecap="round"/>`,
-      extra: ''
-    },
-    thinking: {
-      eyes: `<ellipse cx="38" cy="42" rx="5" ry="5.5" fill="#1a1a1a"/>
-             <ellipse cx="62" cy="42" rx="5" ry="5.5" fill="#1a1a1a"/>
-             <ellipse cx="39.5" cy="40" rx="2" ry="2" fill="#fff" opacity="0.7"/>
-             <ellipse cx="63.5" cy="40" rx="2" ry="2" fill="#fff" opacity="0.7"/>`,
-      mouth: `<path d="M38 60 Q50 58 62 60" stroke="#1a1a1a" stroke-width="2.5" fill="none" stroke-linecap="round"/>`,
-      extra: `<text x="68" y="28" font-size="14" fill="#C9A84C">...</text>`
-    },
-    excited: {
-      eyes: `<ellipse cx="38" cy="42" rx="5.5" ry="6" fill="#1a1a1a"/>
-             <ellipse cx="62" cy="42" rx="5.5" ry="6" fill="#1a1a1a"/>
-             <ellipse cx="39.5" cy="40" rx="2.5" ry="2.5" fill="#fff" opacity="0.8"/>
-             <ellipse cx="63.5" cy="40" rx="2.5" ry="2.5" fill="#fff" opacity="0.8"/>`,
-      mouth: `<path d="M34 56 Q50 72 66 56" stroke="#1a1a1a" stroke-width="2.5" fill="#ff9999" stroke-linecap="round"/>`,
-      extra: `<text x="64" y="26" font-size="12" fill="#C9A84C">⭐</text>`
-    },
-    wink: {
-      eyes: `<ellipse cx="38" cy="42" rx="5" ry="5.5" fill="#1a1a1a"/>
-             <path d="M57 42 Q62 38 67 42" stroke="#1a1a1a" stroke-width="2.5" fill="none" stroke-linecap="round"/>
-             <ellipse cx="39.5" cy="40" rx="2" ry="2" fill="#fff" opacity="0.7"/>`,
-      mouth: `<path d="M36 58 Q50 70 64 58" stroke="#1a1a1a" stroke-width="2.5" fill="none" stroke-linecap="round"/>`,
-      extra: ''
-    },
-    worried: {
-      eyes: `<ellipse cx="38" cy="44" rx="5" ry="4.5" fill="#1a1a1a"/>
-             <ellipse cx="62" cy="44" rx="5" ry="4.5" fill="#1a1a1a"/>
-             <ellipse cx="39.5" cy="42.5" rx="2" ry="1.5" fill="#fff" opacity="0.7"/>
-             <ellipse cx="63.5" cy="42.5" rx="2" ry="1.5" fill="#fff" opacity="0.7"/>
-             <path d="M33 36 Q38 32 43 36" stroke="#1a1a1a" stroke-width="2" fill="none"/>
-             <path d="M57 36 Q62 32 67 36" stroke="#1a1a1a" stroke-width="2" fill="none"/>`,
-      mouth: `<path d="M38 64 Q50 56 62 64" stroke="#1a1a1a" stroke-width="2.5" fill="none" stroke-linecap="round"/>`,
-      extra: ''
-    },
-    cool: {
-      eyes: `<rect x="30" y="38" width="16" height="9" rx="4" fill="#1a1a1a"/>
-             <rect x="54" y="38" width="16" height="9" rx="4" fill="#1a1a1a"/>
-             <rect x="46" y="40" width="8" height="5" rx="2" fill="#1a1a1a"/>`,
-      mouth: `<path d="M38 60 Q50 66 62 60" stroke="#1a1a1a" stroke-width="2.5" fill="none" stroke-linecap="round"/>`,
-      extra: ''
-    },
-  };
-  const e = expressions[expression] || expressions.happy;
-  return `<svg width="${size}" height="${size}" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" class="chip-avatar">
-    <!-- Shadow -->
-    <ellipse cx="50" cy="96" rx="24" ry="4" fill="rgba(0,0,0,0.2)"/>
-    <!-- Body/bib -->
-    <ellipse cx="50" cy="72" rx="22" ry="14" fill="#1B5E35"/>
-    <!-- Bib details -->
-    <ellipse cx="50" cy="72" rx="14" ry="10" fill="#1a7a40"/>
-    <text x="50" y="76" text-anchor="middle" font-size="6.5" font-weight="bold" fill="#fff" font-family="Arial">AI CADDIE</text>
-    <!-- Flag pin on bib -->
-    <line x1="42" y1="68" x2="42" y2="62" stroke="#fff" stroke-width="1.2"/>
-    <polygon points="42,62 47,64 42,66" fill="#C9A84C"/>
-    <!-- Golf ball head -->
-    <circle cx="50" cy="45" r="30" fill="white"/>
-    <!-- Ball dimples -->
-    <circle cx="30" cy="38" r="2.2" fill="rgba(0,0,0,0.06)"/>
-    <circle cx="70" cy="38" r="2.2" fill="rgba(0,0,0,0.06)"/>
-    <circle cx="50" cy="22" r="2.2" fill="rgba(0,0,0,0.06)"/>
-    <circle cx="25" cy="52" r="2.2" fill="rgba(0,0,0,0.06)"/>
-    <circle cx="75" cy="52" r="2.2" fill="rgba(0,0,0,0.06)"/>
-    <circle cx="36" cy="28" r="1.8" fill="rgba(0,0,0,0.05)"/>
-    <circle cx="64" cy="28" r="1.8" fill="rgba(0,0,0,0.05)"/>
-    <!-- Hat -->
-    <ellipse cx="50" cy="20" rx="26" ry="6" fill="#1B5E35"/>
-    <rect x="28" y="8" width="44" height="14" rx="7" fill="#1B5E35"/>
-    <rect x="28" y="14" width="44" height="4" rx="0" fill="#155228"/>
-    <!-- Hat logo C -->
-    <circle cx="50" cy="13" r="5" fill="#C9A84C"/>
-    <text x="50" y="16.5" text-anchor="middle" font-size="6.5" font-weight="bold" fill="#1B5E35" font-family="Arial">C</text>
-    <!-- Expression -->
-    ${e.eyes}
-    ${e.mouth}
-    ${e.extra}
-  </svg>`;
+const CHIP_IMAGES = {
+  happy:    '/chip-happy.png',
+  thinking: '/chip-thinking.png',
+  excited:  '/chip-excited.png',
+  worried:  '/chip-worried.png',
+  cool:     '/chip-cool.png',
+  wink:     '/chip-wink.png',
+};
+
+function chipSVG(expression='happy', size=80) {
+  const src = CHIP_IMAGES[expression] || CHIP_IMAGES.happy;
+  return `<img src="${src}" alt="Chip" width="${size}" height="${size}" style="object-fit:contain;display:block;" class="chip-avatar" />`;
 }
 
 function chipQuip(context) {
@@ -3194,14 +3121,14 @@ function chipQuip(context) {
 function setChipExpression(expression, quip) {
   const avatar = document.getElementById('chipAvatarMain');
   const quipEl = document.getElementById('chipQuipText');
-  if (avatar) avatar.innerHTML = chipSVG(expression, 72);
+  if (avatar) avatar.innerHTML = chipSVG(expression, 88);
   if (quipEl && quip) quipEl.textContent = quip;
 }
 function chipThinking() {
   const avatar = document.getElementById('chipAvatarMain');
   if (!avatar) return;
-  avatar.innerHTML = chipSVG('thinking', 72);
-  const el = avatar.querySelector('.chip-avatar');
+  avatar.innerHTML = chipSVG('thinking', 88);
+  const el = avatar.querySelector('img');
   if (el) el.classList.add('chip-thinking');
   const quipEl = document.getElementById('chipQuipText');
   if (quipEl) quipEl.textContent = chipQuip('thinking');
@@ -3209,7 +3136,7 @@ function chipThinking() {
 function chipDone(context) {
   const avatar = document.getElementById('chipAvatarMain');
   if (!avatar) return;
-  const el = avatar.querySelector('.chip-avatar');
+  const el = avatar.querySelector('img');
   if (el) el.classList.remove('chip-thinking');
   setChipExpression('happy', chipQuip(context||'chat'));
 }
