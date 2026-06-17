@@ -6877,10 +6877,32 @@ async function renderLeaderboard(){
       const userIds = members.map(m => m.user_id).filter(Boolean);
       const inFilter = userIds.map(id => `"${id}"`).join(',');
       const roundsRes = await fetch(
-        `${SB_URL}/rest/v1/rounds?user_id=in.(${userIds.join(',')})&order=created_at.desc`,
+        `${SB_URL}/rest/v1/rounds?user_id=in.(${userIds.join(',')})&select=id,user_id,golfer,score,score_to_par,holes_played,total_putts,beers,slope,rating,holes,tee,course,date&order=created_at.desc`,
         { headers: hdrs }
       );
-      const memberRounds = roundsRes.ok ? await roundsRes.json() : [];
+      const memberRoundsRaw = roundsRes.ok ? await roundsRes.json() : [];
+
+      // Derive missing holes_played and score_to_par from holes JSON for older rounds
+      const memberRounds = memberRoundsRaw.map(r => {
+        let holes_played = r.holes_played;
+        let score_to_par = r.score_to_par;
+        if (!holes_played || !score_to_par) {
+          try {
+            const holes = typeof r.holes === 'string' ? JSON.parse(r.holes||'[]') : (r.holes||[]);
+            const active = holes.filter(h => h.score !== null && !h.scratched);
+            if (!holes_played) holes_played = active.length || 18;
+            if (score_to_par == null) {
+              const totalScore = active.reduce((s,h)=>s+(h.score||0),0);
+              const totalPar   = active.reduce((s,h)=>s+(h.par||4),0);
+              score_to_par = totalScore - totalPar;
+            }
+          } catch(e) {
+            holes_played = holes_played || 18;
+            score_to_par = score_to_par ?? 0;
+          }
+        }
+        return { ...r, holes_played, score_to_par };
+      });
 
       // Step 3: build rows keyed by user_id → display_name
       rows = members.map(m => {
@@ -6999,16 +7021,31 @@ function buildLbRows(names, rounds) {
     const avgPutts = puttRounds.length ? (puttRounds.reduce((s,r)=>s+r.total_putts,0)/puttRounds.length).toFixed(1) : '—';
     const whs    = calcWHS(allGr)?.hcp ?? null;
 
-    // Equalized metrics — avg score-to-par per hole played
-    const equalizedRounds = gr.filter(r => r.holes_played > 0);
-    const avgPerHole = equalizedRounds.length
-      ? equalizedRounds.reduce((s,r) => s + (r.score_to_par / r.holes_played), 0) / equalizedRounds.length
-      : null;
-    const projected18 = avgPerHole !== null ? Math.round(avgPerHole * 18 * 10) / 10 : null; // score-to-par projected to 18
-    const holesPlayed = gr.reduce((s,r) => s + (r.holes_played||18), 0) / gr.length;
-    const mixedLengths = gr.some(r=>(r.holes_played||18)<15) && gr.some(r=>(r.holes_played||18)>=15);
+    // Derive holes_played and score_to_par for older rounds missing these fields
+    const grDerived = gr.map(r => {
+      let holes_played = r.holes_played;
+      let score_to_par = r.score_to_par;
+      if (!holes_played || score_to_par == null) {
+        try {
+          const holes = typeof r.holes==='string' ? JSON.parse(r.holes||'[]') : (r.holes||[]);
+          const active = holes.filter(h => h.score !== null && !h.scratched);
+          if (!holes_played) holes_played = active.length || 18;
+          if (score_to_par == null) {
+            score_to_par = active.reduce((s,h)=>s+(h.score||0),0) - active.reduce((s,h)=>s+(h.par||4),0);
+          }
+        } catch(e) { holes_played = holes_played || 18; score_to_par = score_to_par ?? 0; }
+      }
+      return { ...r, holes_played, score_to_par };
+    });
 
-    return { name, avg, best, rounds: gr.length, beers, avgPutts, whs, avgPerHole, projected18, holesPlayed: Math.round(holesPlayed), mixedLengths };
+    // Equalized metrics
+    const avgPerHole = grDerived.length
+      ? grDerived.reduce((s,r) => s + (r.score_to_par / r.holes_played), 0) / grDerived.length
+      : null;
+    const projected18 = avgPerHole !== null ? Math.round(avgPerHole * 18 * 10) / 10 : null;
+    const holesPlayed = Math.round(grDerived.reduce((s,r) => s + (r.holes_played||18), 0) / grDerived.length);
+
+    return { name, avg, best, rounds: gr.length, beers, avgPutts, whs, avgPerHole, projected18, holesPlayed };
   }).filter(Boolean);
 }
 
