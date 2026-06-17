@@ -212,6 +212,15 @@ table.scorecard { width:100%; border-collapse:collapse; font-size:0.82rem; }
 .ai-response-card strong { color:#c4b5fd; }
 .ai-streaming { opacity:0.7; }
 .ai-streaming::after { content:'▊'; animation:blink 0.8s infinite; }
+
+/* ── Chip character ── */
+.chip-avatar { display:inline-block; transition:transform 0.3s; }
+.chip-avatar:hover { transform:scale(1.05); }
+.chip-bubble { background:rgba(255,255,255,0.08); border:1px solid rgba(201,168,76,0.3); border-radius:12px 12px 12px 2px; padding:0.5rem 0.85rem; font-size:0.82rem; color:var(--cream); font-style:italic; max-width:220px; line-height:1.5; }
+.chip-header { display:flex; align-items:center; gap:1rem; padding:0.75rem 0 1rem; }
+.chip-thinking { animation:chipBob 0.6s ease-in-out infinite alternate; }
+@keyframes chipBob { from{transform:translateY(0)} to{transform:translateY(-4px)} }
+@keyframes chipWink { 0%,90%,100%{transform:scaleY(1)} 95%{transform:scaleY(0.1)} }
 @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
 .ai-chat-bubble { padding:0.75rem 1rem; border-radius:12px; font-size:0.85rem; line-height:1.6; max-width:92%; }
 .ai-chat-user { background:rgba(201,168,76,0.12); border:1px solid rgba(201,168,76,0.2); align-self:flex-end; color:var(--cream); }
@@ -818,7 +827,7 @@ nav { padding: 0.8rem 1rem !important; }
       <span class="btab-icon">🏌️</span><span class="btab-label">Clubs</span>
     </button>
     <button class="btab" id="btab-ai" onclick="showPage('ai',this)">
-      <span class="btab-icon">🤖</span><span class="btab-label small">AI Caddie</span>
+      <span class="btab-icon" style="font-size:0.9rem;line-height:1.2">🏌️</span><span class="btab-label small">Chip</span>
     </button>
     <button class="btab" id="btab-analytics" onclick="showPage('analytics',this)">
       <span class="btab-icon">📈</span><span class="btab-label">Analytics</span>
@@ -1998,13 +2007,21 @@ nav { padding: 0.8rem 1rem !important; }
 
   <!-- AI COACHING PAGE -->
   <div id="page-ai" class="page">
-    <div class="page-header">🤖 AI Caddie</div>
+    <!-- Chip header -->
+    <div class="chip-header">
+      <div id="chipAvatarMain"></div>
+      <div>
+        <div style="font-family:'Playfair Display',serif;font-size:1.4rem;color:var(--gold);line-height:1">Chip</div>
+        <div style="font-size:0.72rem;color:var(--cream-muted);text-transform:uppercase;letter-spacing:0.1em">Your AI Caddie</div>
+        <div class="chip-bubble" id="chipQuipText" style="margin-top:0.4rem"></div>
+      </div>
+    </div>
     <div style="max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:1rem">
 
       <!-- Mode tabs -->
       <div style="display:flex;gap:0.5rem;background:rgba(0,0,0,0.2);padding:0.35rem;border-radius:12px">
         <button class="ai-mode-btn active" id="aiMode-debrief"  onclick="switchAiMode('debrief')">📊 Debrief</button>
-        <button class="ai-mode-btn"        id="aiMode-chat"     onclick="switchAiMode('chat')">💬 Ask Caddie</button>
+        <button class="ai-mode-btn"        id="aiMode-chat"     onclick="switchAiMode('chat')">💬 Ask Chip</button>
         <button class="ai-mode-btn"        id="aiMode-preround" onclick="switchAiMode('preround')">⛳ Pre-Round</button>
         <button class="ai-mode-btn"        id="aiMode-range"    onclick="switchAiMode('range')">🏌️ Range</button>
         <button class="ai-mode-btn"        id="aiMode-swing"    onclick="switchAiMode('swing')">🎥 Swing</button>
@@ -2019,7 +2036,7 @@ nav { padding: 0.8rem 1rem !important; }
             <label>Select Round</label>
             <select id="aiDebriefRoundPicker" style="font-size:0.85rem"></select>
           </div>
-          <button class="btn btn-ai" onclick="runDebrief()">🤖 Debrief This Round</button>
+          <button class="btn btn-ai" onclick="runDebrief()">Ask Chip to Debrief</button>
         </div>
         <div id="aiDebriefOutput" style="display:none"></div>
         <div id="aiDebriefActions" style="display:none;gap:0.75rem;flex-wrap:wrap;justify-content:flex-end;margin-top:0.5rem">
@@ -2136,7 +2153,7 @@ nav { padding: 0.8rem 1rem !important; }
             <input type="text" id="preRoundExtras" placeholder="e.g. haven't played in 3 weeks, back is a little stiff, want to focus on tempo…" />
           </div>
 
-          <button class="btn btn-ai" style="width:100%;justify-content:center" onclick="runPreRound()">🤖 Get My Game Plan</button>
+          <button class="btn btn-ai" style="width:100%;justify-content:center" onclick="runPreRound()">⛳ Get My Game Plan from Chip</button>
         </div>
         <div id="aiPreRoundOutput" style="display:none"></div>
         <div id="aiPreRoundActions" style="display:none;gap:0.75rem;flex-wrap:wrap;justify-content:flex-end;margin-top:0.5rem">
@@ -2205,7 +2222,7 @@ nav { padding: 0.8rem 1rem !important; }
             <input type="text" id="rangeExtras" placeholder="e.g. shanking my irons, losing distance off the tee, can't stop 3-putting…" />
           </div>
 
-          <button class="btn btn-ai" style="width:100%;justify-content:center;background:linear-gradient(135deg,#1B3A2D,#2d5a40);border-color:#6fcf97;color:#6fcf97" onclick="runRangePlan()">🏌️ Build My Practice Plan</button>
+          <button class="btn btn-ai" style="width:100%;justify-content:center;background:linear-gradient(135deg,#1B3A2D,#2d5a40);border-color:#6fcf97;color:#6fcf97" onclick="runRangePlan()">🏌️ Build My Range Plan</button>
         </div>
         <div id="aiRangeOutput" style="display:none"></div>
         <div id="aiRangeActions" style="display:none;gap:0.75rem;flex-wrap:wrap;justify-content:flex-end;margin-top:0.5rem">
@@ -3066,7 +3083,137 @@ async function renderNational() {
 
 
 // ─────────────────────────────────────
-//  RANGE PRACTICE PLAN
+//  CHIP — AI Caddie Character
+// ─────────────────────────────────────
+function chipSVG(expression='happy', size=60) {
+  const expressions = {
+    happy: {
+      eyes: `<ellipse cx="38" cy="42" rx="5" ry="5.5" fill="#1a1a1a"/>
+             <ellipse cx="62" cy="42" rx="5" ry="5.5" fill="#1a1a1a"/>
+             <ellipse cx="39.5" cy="40" rx="2" ry="2" fill="#fff" opacity="0.7"/>
+             <ellipse cx="63.5" cy="40" rx="2" ry="2" fill="#fff" opacity="0.7"/>`,
+      mouth: `<path d="M36 58 Q50 70 64 58" stroke="#1a1a1a" stroke-width="2.5" fill="none" stroke-linecap="round"/>`,
+      extra: ''
+    },
+    thinking: {
+      eyes: `<ellipse cx="38" cy="42" rx="5" ry="5.5" fill="#1a1a1a"/>
+             <ellipse cx="62" cy="42" rx="5" ry="5.5" fill="#1a1a1a"/>
+             <ellipse cx="39.5" cy="40" rx="2" ry="2" fill="#fff" opacity="0.7"/>
+             <ellipse cx="63.5" cy="40" rx="2" ry="2" fill="#fff" opacity="0.7"/>`,
+      mouth: `<path d="M38 60 Q50 58 62 60" stroke="#1a1a1a" stroke-width="2.5" fill="none" stroke-linecap="round"/>`,
+      extra: `<text x="68" y="28" font-size="14" fill="#C9A84C">...</text>`
+    },
+    excited: {
+      eyes: `<ellipse cx="38" cy="42" rx="5.5" ry="6" fill="#1a1a1a"/>
+             <ellipse cx="62" cy="42" rx="5.5" ry="6" fill="#1a1a1a"/>
+             <ellipse cx="39.5" cy="40" rx="2.5" ry="2.5" fill="#fff" opacity="0.8"/>
+             <ellipse cx="63.5" cy="40" rx="2.5" ry="2.5" fill="#fff" opacity="0.8"/>`,
+      mouth: `<path d="M34 56 Q50 72 66 56" stroke="#1a1a1a" stroke-width="2.5" fill="#ff9999" stroke-linecap="round"/>`,
+      extra: `<text x="64" y="26" font-size="12" fill="#C9A84C">⭐</text>`
+    },
+    wink: {
+      eyes: `<ellipse cx="38" cy="42" rx="5" ry="5.5" fill="#1a1a1a"/>
+             <path d="M57 42 Q62 38 67 42" stroke="#1a1a1a" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+             <ellipse cx="39.5" cy="40" rx="2" ry="2" fill="#fff" opacity="0.7"/>`,
+      mouth: `<path d="M36 58 Q50 70 64 58" stroke="#1a1a1a" stroke-width="2.5" fill="none" stroke-linecap="round"/>`,
+      extra: ''
+    },
+    worried: {
+      eyes: `<ellipse cx="38" cy="44" rx="5" ry="4.5" fill="#1a1a1a"/>
+             <ellipse cx="62" cy="44" rx="5" ry="4.5" fill="#1a1a1a"/>
+             <ellipse cx="39.5" cy="42.5" rx="2" ry="1.5" fill="#fff" opacity="0.7"/>
+             <ellipse cx="63.5" cy="42.5" rx="2" ry="1.5" fill="#fff" opacity="0.7"/>
+             <path d="M33 36 Q38 32 43 36" stroke="#1a1a1a" stroke-width="2" fill="none"/>
+             <path d="M57 36 Q62 32 67 36" stroke="#1a1a1a" stroke-width="2" fill="none"/>`,
+      mouth: `<path d="M38 64 Q50 56 62 64" stroke="#1a1a1a" stroke-width="2.5" fill="none" stroke-linecap="round"/>`,
+      extra: ''
+    },
+    cool: {
+      eyes: `<rect x="30" y="38" width="16" height="9" rx="4" fill="#1a1a1a"/>
+             <rect x="54" y="38" width="16" height="9" rx="4" fill="#1a1a1a"/>
+             <rect x="46" y="40" width="8" height="5" rx="2" fill="#1a1a1a"/>`,
+      mouth: `<path d="M38 60 Q50 66 62 60" stroke="#1a1a1a" stroke-width="2.5" fill="none" stroke-linecap="round"/>`,
+      extra: ''
+    },
+  };
+  const e = expressions[expression] || expressions.happy;
+  return `<svg width="${size}" height="${size}" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" class="chip-avatar">
+    <!-- Shadow -->
+    <ellipse cx="50" cy="96" rx="24" ry="4" fill="rgba(0,0,0,0.2)"/>
+    <!-- Body/bib -->
+    <ellipse cx="50" cy="72" rx="22" ry="14" fill="#1B5E35"/>
+    <!-- Bib details -->
+    <ellipse cx="50" cy="72" rx="14" ry="10" fill="#1a7a40"/>
+    <text x="50" y="76" text-anchor="middle" font-size="6.5" font-weight="bold" fill="#fff" font-family="Arial">AI CADDIE</text>
+    <!-- Flag pin on bib -->
+    <line x1="42" y1="68" x2="42" y2="62" stroke="#fff" stroke-width="1.2"/>
+    <polygon points="42,62 47,64 42,66" fill="#C9A84C"/>
+    <!-- Golf ball head -->
+    <circle cx="50" cy="45" r="30" fill="white"/>
+    <!-- Ball dimples -->
+    <circle cx="30" cy="38" r="2.2" fill="rgba(0,0,0,0.06)"/>
+    <circle cx="70" cy="38" r="2.2" fill="rgba(0,0,0,0.06)"/>
+    <circle cx="50" cy="22" r="2.2" fill="rgba(0,0,0,0.06)"/>
+    <circle cx="25" cy="52" r="2.2" fill="rgba(0,0,0,0.06)"/>
+    <circle cx="75" cy="52" r="2.2" fill="rgba(0,0,0,0.06)"/>
+    <circle cx="36" cy="28" r="1.8" fill="rgba(0,0,0,0.05)"/>
+    <circle cx="64" cy="28" r="1.8" fill="rgba(0,0,0,0.05)"/>
+    <!-- Hat -->
+    <ellipse cx="50" cy="20" rx="26" ry="6" fill="#1B5E35"/>
+    <rect x="28" y="8" width="44" height="14" rx="7" fill="#1B5E35"/>
+    <rect x="28" y="14" width="44" height="4" rx="0" fill="#155228"/>
+    <!-- Hat logo C -->
+    <circle cx="50" cy="13" r="5" fill="#C9A84C"/>
+    <text x="50" y="16.5" text-anchor="middle" font-size="6.5" font-weight="bold" fill="#1B5E35" font-family="Arial">C</text>
+    <!-- Expression -->
+    ${e.eyes}
+    ${e.mouth}
+    ${e.extra}
+  </svg>`;
+}
+
+function chipQuip(context) {
+  const quips = {
+    debrief:  ["Let's see what happened out there.", "Time to break this down.", "Your data's in. Let's talk."],
+    chat:     ["What do you need?", "Ask me anything.", "I'm all ears."],
+    preround: ["Let's build your game plan.", "Time to get you ready.", "Course is waiting. Let's go."],
+    range:    ["Time to put in the work.", "Let's fix what's broken.", "Range session. Let's get specific."],
+    swing:    ["Show me your swing.", "Let's see what we're working with.", "Upload it. I'll tell you what I see."],
+    thinking: ["On it...", "Reviewing your data...", "Give me a second..."],
+    saved:    ["Round saved. Good work.", "In the books.", "Done. Check your history."],
+    birdie:   ["That'll play. 🐦", "Birdie. Nice shot.", "One under. Keep it going."],
+    bogey:    ["Bogey. It happens. Move on.", "One over. Shake it off.", "Forget that hole. Next one."],
+    eagle:    ["Eagle! That's what I'm talking about. 🦅", "TWO under. Outstanding.", "Eagles don't happen by accident."],
+    beer:     ["According to my calculations, that earned you a cold one. 🍺", "19th hole material. 🍺", "Hydration. Important. 🍺"],
+    par:      ["Par. Solid. Keep it up.", "Even. Good round building.", "Par is never boring."],
+  };
+  const arr = quips[context] || quips.chat;
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
+function setChipExpression(expression, quip) {
+  const avatar = document.getElementById('chipAvatarMain');
+  const quipEl = document.getElementById('chipQuipText');
+  if (avatar) avatar.innerHTML = chipSVG(expression, 72);
+  if (quipEl && quip) quipEl.textContent = quip;
+}
+function chipThinking() {
+  const avatar = document.getElementById('chipAvatarMain');
+  if (!avatar) return;
+  avatar.innerHTML = chipSVG('thinking', 72);
+  const el = avatar.querySelector('.chip-avatar');
+  if (el) el.classList.add('chip-thinking');
+  const quipEl = document.getElementById('chipQuipText');
+  if (quipEl) quipEl.textContent = chipQuip('thinking');
+}
+function chipDone(context) {
+  const avatar = document.getElementById('chipAvatarMain');
+  if (!avatar) return;
+  const el = avatar.querySelector('.chip-avatar');
+  if (el) el.classList.remove('chip-thinking');
+  setChipExpression('happy', chipQuip(context||'chat'));
+}
+
 // ─────────────────────────────────────
 const _rangePills = {}; // groupId → value(s)
 
@@ -3352,7 +3499,7 @@ async function loadPoseModel() {
 }
 
 async function runPoseOnFrames() {
-  document.getElementById('swingStatus').textContent = '🤖 Running pose detection…';
+  document.getElementById('swingStatus').textContent = '🏌️ Chip is analysing pose…';
   const loaded = await loadPoseModel();
   if (!loaded || !_poseDetector) {
     renderFrameStrip(_swingFrames);
@@ -3361,7 +3508,7 @@ async function runPoseOnFrames() {
   }
   for (let i = 0; i < _swingFrames.length; i++) {
     const frame = _swingFrames[i];
-    document.getElementById('swingStatus').textContent = `🤖 Analysing pose — frame ${i+1} of ${_swingFrames.length}…`;
+    document.getElementById('swingStatus').textContent = `🏌️ Analysing frame ${i+1} of ${_swingFrames.length}…`;
     try {
       const img = new Image();
       await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = frame.dataUrl; });
@@ -4132,7 +4279,7 @@ function showPage(name,btn){
   if(name==='admin')loadAdminData();
   if(name==='cartgirl')loadCartGirlSightings();
   if(name==='games')renderGamesPage();
-  if(name==='ai'){ switchAiMode('debrief'); }
+  if(name==='ai'){ switchAiMode('debrief'); setChipExpression('happy', chipQuip('debrief')); }
   if(name==='new-round'){ lsCheckResume(); }
   if(name!=='new-round') stopQrScan();
 }
@@ -4542,10 +4689,15 @@ async function commitRound({golfer,courseName,date,tee,holes,slope,rating,course
     await sbInsert('rounds',round);
     _rounds.unshift(round);
     const diff=round.score_to_par;
+    const chipCtx = diff<=-2?'eagle':diff===-1?'birdie':diff===0?'par':diff<=2?'bogey':'bogey';
     showToast(`Saved for ${golfer}! ${totalScore} (${diff>0?'+':''}${diff}) · 🟣 ${totalPutts} putts · 🍺 ${totalBeer}${photoUrl?' 📷':''}`);
+    // Chip reaction if on AI page
+    if (document.getElementById('page-ai')?.classList.contains('active')) {
+      setChipExpression(diff<=-2?'excited':diff<0?'wink':diff<=1?'happy':'worried', chipQuip(chipCtx));
+    }
     if(!round.group_id){
       setTimeout(()=>{
-        if(confirm('🤖 Want your AI caddie to debrief this round?')){
+        if(confirm('🏌️ Want Chip to debrief this round?')){
           triggerAutoDebrief(round);
         }
       },800);
@@ -5781,6 +5933,9 @@ function switchAiMode(mode) {
   document.getElementById('aiPanel-' + mode).style.gap = '1rem';
   if (mode === 'debrief') populateDebriefPicker();
   if (mode === 'preround') populatePreRoundCourseInfo();
+  // Update Chip expression and quip
+  const chipExprs = { debrief:'happy', chat:'wink', preround:'cool', range:'excited', swing:'thinking' };
+  setChipExpression(chipExprs[mode] || 'happy', chipQuip(mode));
 }
 
 // ── Context builder — assembles golfer profile into a rich system prompt ──
@@ -5879,8 +6034,9 @@ function renderAiMarkdown(text) {
 // ── Streaming API call ──
 async function callCaddieStreaming(messages, outputEl) {
   outputEl.style.display = 'block';
-  outputEl.innerHTML = `<div class="ai-response-card ai-streaming" id="aiStreamTarget">Your caddie is thinking…</div>`;
+  outputEl.innerHTML = `<div class="ai-response-card ai-streaming" id="aiStreamTarget">Chip is thinking…</div>`;
   const target = document.getElementById('aiStreamTarget');
+  chipThinking();
 
   try {
     const response = await fetch('/api/caddie', {
@@ -5899,6 +6055,7 @@ async function callCaddieStreaming(messages, outputEl) {
       const err = await response.json();
       target.className = 'ai-error';
       target.textContent = '❌ ' + (err.error?.message || 'API error');
+      chipDone('chat');
       return;
     }
 
@@ -5922,6 +6079,7 @@ async function callCaddieStreaming(messages, outputEl) {
           if (data.type === 'message_stop') {
             target.className = 'ai-response-card';
             target.innerHTML = renderAiMarkdown(fullText);
+            chipDone('chat');
           }
         } catch(e) {}
       }
