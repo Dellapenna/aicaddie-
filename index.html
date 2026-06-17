@@ -1244,11 +1244,16 @@ nav { padding: 0.8rem 1rem !important; }
         <label>Sort by:</label>
         <select id="nationalSort" onchange="renderNational()" style="font-size:0.85rem">
           <option value="avg">Avg Score</option>
+          <option value="equalized">Equalized (per hole)</option>
+          <option value="projected">Projected 18</option>
           <option value="best">Best Round</option>
           <option value="rounds">Rounds Played</option>
           <option value="putts">Avg Putts</option>
           <option value="beers">Total Beers 🍺</option>
         </select>
+      </div>
+      <div id="lbNationalMixedBanner" style="display:none;margin-top:0.75rem;background:rgba(201,168,76,0.08);border:1px solid rgba(201,168,76,0.2);border-radius:8px;padding:0.6rem 0.9rem;font-size:0.78rem;color:var(--cream-muted)">
+        ⚠️ Mixed round lengths detected. <strong style="color:var(--gold)">Equalized</strong> or <strong style="color:var(--gold)">Projected 18</strong> gives a fairer comparison.
       </div>
       <p style="font-size:0.78rem;color:var(--cream-muted);margin-top:0.5rem">Names shown based on each golfer's privacy preference. <a onclick="showPage('profile',null)" style="color:var(--gold);cursor:pointer;text-decoration:underline">Manage yours in Profile</a>.</p>
     </div>
@@ -3071,21 +3076,53 @@ async function renderNational() {
     return;
   }
 
-  let sorted = [...data];
-  if (sortBy === 'avg')    sorted.sort((a,b) => (a.avg_score||999) - (b.avg_score||999));
-  if (sortBy === 'best')   sorted.sort((a,b) => (a.best_score||999) - (b.best_score||999));
-  if (sortBy === 'rounds') sorted.sort((a,b) => b.rounds_played - a.rounds_played);
-  if (sortBy === 'putts')  sorted.sort((a,b) => (a.avg_putts||999) - (b.avg_putts||999));
-  if (sortBy === 'beers')  sorted.sort((a,b) => b.total_beers - a.total_beers);
+  // Compute equalized metrics — use avg_score_to_par and avg_holes_played if available,
+  // otherwise fall back to avg_score / 18 as approximation
+  const rows = data.map(r => {
+    const holesPlayed = r.avg_holes_played || 18;
+    const avgScoreToPar = r.avg_score_to_par ?? (r.avg_score ? r.avg_score - 72 : null);
+    const avgPerHole = avgScoreToPar !== null ? avgScoreToPar / holesPlayed : null;
+    const projected18 = avgPerHole !== null ? Math.round(avgPerHole * 18 * 10) / 10 : null;
+    return { ...r, holesPlayed, avgPerHole, projected18 };
+  });
+
+  // Detect mixed round lengths
+  const holesArr = rows.filter(r=>r.holesPlayed>0).map(r=>r.holesPlayed);
+  const hasMixed = holesArr.length > 1 && (Math.max(...holesArr) - Math.min(...holesArr)) >= 5;
+  const mixedBanner = document.getElementById('lbNationalMixedBanner');
+  if (mixedBanner) mixedBanner.style.display = hasMixed ? 'block' : 'none';
+
+  let sorted = [...rows];
+  if (sortBy === 'avg')        sorted.sort((a,b) => (a.avg_score||999) - (b.avg_score||999));
+  if (sortBy === 'equalized')  sorted.sort((a,b) => (a.avgPerHole??999) - (b.avgPerHole??999));
+  if (sortBy === 'projected')  sorted.sort((a,b) => (a.projected18??999) - (b.projected18??999));
+  if (sortBy === 'best')       sorted.sort((a,b) => (a.best_score||999) - (b.best_score||999));
+  if (sortBy === 'rounds')     sorted.sort((a,b) => b.rounds_played - a.rounds_played);
+  if (sortBy === 'putts')      sorted.sort((a,b) => (a.avg_putts||999) - (b.avg_putts||999));
+  if (sortBy === 'beers')      sorted.sort((a,b) => b.total_beers - a.total_beers);
 
   const myAnonId = _currentProfile?.anonymous_id;
   const medals = ['🥇','🥈','🥉'];
   const topClass = i => i===0?'top1':i===1?'top2':i===2?'top3':'';
   const rankColor = i => i===0?'var(--gold)':i===1?'#c0c0c0':i===2?'#c87941':'var(--cream-muted)';
 
+  const getScoreDisplay = (r) => {
+    if (sortBy === 'equalized' && r.avgPerHole !== null) {
+      const sign = r.avgPerHole >= 0 ? '+' : '';
+      return { val: sign + r.avgPerHole.toFixed(2), sub: 'per hole avg' };
+    }
+    if (sortBy === 'projected' && r.projected18 !== null) {
+      const sign = r.projected18 >= 0 ? '+' : '';
+      return { val: sign + r.projected18.toFixed(1), sub: 'proj. 18 (to par)' };
+    }
+    return { val: r.avg_score || '—', sub: 'avg score' };
+  };
+
   el.innerHTML = `<div class="lb-list">${sorted.map((r,i) => {
     const isMe = r.anonymous_id === myAnonId;
     const displayName = r.show_real_name && r.display_name ? r.display_name : r.anonymous_id;
+    const { val, sub } = getScoreDisplay(r);
+    const holesTag = r.holesPlayed && r.holesPlayed < 17 ? `<span class="lb-pill" style="color:#f59e0b;border-color:rgba(245,158,11,0.3)">9 holes</span>` : '';
     return `<div class="lb-card ${topClass(i)}" style="${isMe?'border-color:rgba(201,168,67,0.6);background:rgba(201,168,67,0.06)':''}">
       <div class="lb-rank" style="color:${rankColor(i)}">${medals[i]||i+1}</div>
       <div class="lb-avatar" style="background:${r.avatar_color||'#C9A84C'}">${esc(displayName).charAt(0).toUpperCase()}</div>
@@ -3093,19 +3130,21 @@ async function renderNational() {
         <div class="lb-name" style="${isMe?'color:var(--gold)':''}">${esc(displayName)}${isMe?' 👈':''}</div>
         <div class="lb-pills">
           <span class="lb-pill">${r.rounds_played} rounds</span>
+          ${holesTag}
           ${r.best_score ? `<span class="lb-pill">Best ${r.best_score}</span>` : ''}
           ${r.avg_putts ? `<span class="lb-pill" style="color:#a78bfa;border-color:rgba(167,139,250,0.3)">🟣 ${r.avg_putts}</span>` : ''}
           ${r.total_beers > 0 ? `<span class="lb-pill" style="color:var(--amber);border-color:rgba(201,168,76,0.3)">🍺 ${r.total_beers}</span>` : ''}
         </div>
       </div>
       <div class="lb-score-block">
-        <div class="lb-score-main">${r.avg_score||'—'}</div>
-        <div class="lb-score-sub">avg score</div>
+        <div class="lb-score-main">${val}</div>
+        <div class="lb-score-sub">${sub}</div>
       </div>
     </div>`;
   }).join('')}</div>`;
 
-  renderBarChart('lbChart', sorted.slice(0,10), r=>r.avg_score||0,
+  const chartValueFn = sortBy==='equalized' ? r=>r.avgPerHole??0 : sortBy==='projected' ? r=>r.projected18??0 : r=>r.avg_score||0;
+  renderBarChart('lbChart', sorted.slice(0,10), chartValueFn,
     r => r.show_real_name && r.display_name ? r.display_name : r.anonymous_id, 'bar-fill-score', '');
 }
 
