@@ -1789,8 +1789,15 @@ nav { padding: 0.8rem 1rem !important; }
 
   <!-- CART GIRL -->
   <div id="page-cartgirl" class="page">
-    <div class="page-header">🍺 Cart Girl Sightings</div>
-    <p style="font-size:0.85rem;color:var(--cream-muted);margin-bottom:1.5rem">Spotted an exceptional cart girl? Log it for the crew. Community submissions only — keep it classy.</p>
+    <!-- Duffy header -->
+    <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1.25rem">
+      <img src="/duffy-beer.png" alt="Duffy" style="width:80px;height:80px;object-fit:contain;flex-shrink:0" />
+      <div>
+        <div style="font-family:'Playfair Display',serif;font-size:1.4rem;color:var(--gold);line-height:1">Cart Girl Sightings</div>
+        <div style="font-size:0.78rem;color:var(--cream-muted);margin-top:0.3rem">Spotted an exceptional cart girl? Log it for the crew.</div>
+        <div style="font-size:0.75rem;color:rgba(201,168,76,0.6);font-style:italic;margin-top:0.2rem">"I'm here for a good time (not a long time)" — Duffy</div>
+      </div>
+    </div>
 
     <!-- Submission form -->
     <div class="card" style="margin-bottom:1.5rem">
@@ -1858,8 +1865,15 @@ nav { padding: 0.8rem 1rem !important; }
 
   <!-- GAMES -->
   <div id="page-games" class="page">
-    <div class="page-header">🎮 Games</div>
-    <p style="font-size:0.85rem;color:var(--cream-muted);margin-bottom:1.5rem">Money games to play with your crew. Your game is saved if you leave mid-round.</p>
+    <!-- Duffy header -->
+    <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1.25rem">
+      <img src="/duffy-happy.png" alt="Duffy" style="width:80px;height:80px;object-fit:contain;flex-shrink:0" />
+      <div>
+        <div style="font-family:'Playfair Display',serif;font-size:1.4rem;color:var(--gold);line-height:1">Games</div>
+        <div style="font-size:0.78rem;color:var(--cream-muted);margin-top:0.3rem">Money games to play with your crew. Your game is saved if you leave mid-round.</div>
+        <div style="font-size:0.75rem;color:rgba(201,168,76,0.6);font-style:italic;margin-top:0.2rem">"I'm here for a good time (not a long time)" — Duffy</div>
+      </div>
+    </div>
     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1rem;margin-bottom:2rem">
       <div class="card" style="cursor:pointer;border-color:rgba(212,168,67,0.3)" onclick="launchGame('wolf')">
         <div style="font-size:2rem;margin-bottom:0.5rem">🐺</div>
@@ -1976,68 +1990,6 @@ nav { padding: 0.8rem 1rem !important; }
 
 
   <!-- GAMES PAGE -->
-  <div id="page-games" class="page">
-    <div class="page-header">🎮 Games</div>
-    <p style="font-size:0.85rem;color:var(--cream-muted);margin-bottom:1.5rem">Side games and betting formats to spice up your round.</p>
-
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1rem">
-
-      <!-- Stakes Play / Wolf -->
-      <div class="card" style="border-color:rgba(212,168,67,0.3);cursor:pointer;transition:all 0.2s" onclick="launchGame('https://wolfcaddie.netlify.app/')"
-        onmouseover="this.style.borderColor='var(--gold)';this.style.transform='translateY(-2px)'"
-        onmouseout="this.style.borderColor='rgba(212,168,67,0.3)';this.style.transform=''">
-        <div style="font-size:2.5rem;margin-bottom:0.75rem">🐺</div>
-        <div style="font-family:'Playfair Display',serif;font-size:1.2rem;color:var(--gold);margin-bottom:0.4rem">Stakes Play</div>
-        <div style="font-size:0.82rem;color:var(--cream-muted);line-height:1.6;margin-bottom:1rem">5-man Wolf with custom betting rules, Blind Wolf, Lone Wolf, Chase Holes, and automatic dollar settlement.</div>
-        <div style="display:flex;gap:0.4rem;flex-wrap:wrap;margin-bottom:1rem">
-          <span style="background:rgba(201,168,76,0.15);color:var(--gold);border:1px solid rgba(201,168,76,0.3);border-radius:20px;padding:0.15rem 0.55rem;font-size:0.72rem;font-weight:600">4-6 Players</span>
-          <span style="background:rgba(201,168,76,0.15);color:var(--gold);border:1px solid rgba(201,168,76,0.3);border-radius:20px;padding:0.15rem 0.55rem;font-size:0.72rem;font-weight:600">Betting</span>
-          <span style="background:rgba(201,168,76,0.15);color:var(--gold);border:1px solid rgba(201,168,76,0.3);border-radius:20px;padding:0.15rem 0.55rem;font-size:0.72rem;font-weight:600">Chase Holes</span>
-          <span style="background:rgba(201,168,76,0.15);color:var(--gold);border:1px solid rgba(201,168,76,0.3);border-radius:20px;padding:0.15rem 0.55rem;font-size:0.72rem;font-weight:600">18 Holes</span>
-        </div>
-        <button class="btn btn-gold" style="width:100%;justify-content:center" onclick="launchGame('https://wolfcaddie.netlify.app/')">Play Stakes Play →</button>
-      </div>
-
-      <!-- Coming Soon — Stableford -->
-      <div class="card" style="opacity:0.6">
-        <div style="font-size:2.5rem;margin-bottom:0.75rem">🎯</div>
-        <div style="font-family:'Playfair Display',serif;font-size:1.2rem;color:var(--gold);margin-bottom:0.4rem">Stableford</div>
-        <div style="font-size:0.82rem;color:var(--cream-muted);line-height:1.6;margin-bottom:1rem">Points-based scoring — eagle 4pts, birdie 3pts, par 2pts, bogey 1pt. Individual and team formats.</div>
-        <div style="display:flex;gap:0.4rem;flex-wrap:wrap;margin-bottom:1rem">
-          <span style="background:var(--card-bg);color:var(--cream-muted);border:1px solid var(--border);border-radius:20px;padding:0.15rem 0.55rem;font-size:0.72rem;font-weight:600">Any Players</span>
-          <span style="background:var(--card-bg);color:var(--cream-muted);border:1px solid var(--border);border-radius:20px;padding:0.15rem 0.55rem;font-size:0.72rem;font-weight:600">Points</span>
-        </div>
-        <button class="btn btn-outline" style="width:100%;justify-content:center;cursor:not-allowed;opacity:0.5" disabled>Coming Soon</button>
-      </div>
-
-      <!-- Coming Soon — Skins -->
-      <div class="card" style="opacity:0.6">
-        <div style="font-size:2.5rem;margin-bottom:0.75rem">💰</div>
-        <div style="font-family:'Playfair Display',serif;font-size:1.2rem;color:var(--gold);margin-bottom:0.4rem">Skins</div>
-        <div style="font-size:0.82rem;color:var(--cream-muted);line-height:1.6;margin-bottom:1rem">Hole-by-hole winner takes the pot. Ties carry over to the next hole. Pure drama.</div>
-        <div style="display:flex;gap:0.4rem;flex-wrap:wrap;margin-bottom:1rem">
-          <span style="background:var(--card-bg);color:var(--cream-muted);border:1px solid var(--border);border-radius:20px;padding:0.15rem 0.55rem;font-size:0.72rem;font-weight:600">2-6 Players</span>
-          <span style="background:var(--card-bg);color:var(--cream-muted);border:1px solid var(--border);border-radius:20px;padding:0.15rem 0.55rem;font-size:0.72rem;font-weight:600">Betting</span>
-        </div>
-        <button class="btn btn-outline" style="width:100%;justify-content:center;cursor:not-allowed;opacity:0.5" disabled>Coming Soon</button>
-      </div>
-
-      <!-- Coming Soon — Match Play -->
-      <div class="card" style="opacity:0.6">
-        <div style="font-size:2.5rem;margin-bottom:0.75rem">⚔️</div>
-        <div style="font-family:'Playfair Display',serif;font-size:1.2rem;color:var(--gold);margin-bottom:0.4rem">Match Play</div>
-        <div style="font-size:0.82rem;color:var(--cream-muted);line-height:1.6;margin-bottom:1rem">Holes won, lost, or halved. Running match score. First to win more holes than remain wins.</div>
-        <div style="display:flex;gap:0.4rem;flex-wrap:wrap;margin-bottom:1rem">
-          <span style="background:var(--card-bg);color:var(--cream-muted);border:1px solid var(--border);border-radius:20px;padding:0.15rem 0.55rem;font-size:0.72rem;font-weight:600">2 Players</span>
-          <span style="background:var(--card-bg);color:var(--cream-muted);border:1px solid var(--border);border-radius:20px;padding:0.15rem 0.55rem;font-size:0.72rem;font-weight:600">Head to Head</span>
-        </div>
-        <button class="btn btn-outline" style="width:100%;justify-content:center;cursor:not-allowed;opacity:0.5" disabled>Coming Soon</button>
-      </div>
-
-    </div>
-  </div>
-
-
   <!-- AI COACHING PAGE -->
   <div id="page-ai" class="page">
     <!-- Chip header -->
@@ -4103,7 +4055,7 @@ async function loadCartGirlSightings(append = false) {
   if (!append) el.innerHTML = '';
 
   if (!data?.length && !append) {
-    el.innerHTML = chipEmpty("No sightings yet.", "Be the first to submit one.", "grid-column:1/-1");
+    el.innerHTML = `<div class="chip-empty" style="grid-column:1/-1"><img src="/duffy-happy.png" alt="Duffy" /><p>No sightings yet.</p><div class="chip-empty-quip">Be the first to submit one.</div></div>`;
     document.getElementById('cgLoadMoreWrap').style.display = 'none';
     return;
   }
@@ -4910,6 +4862,15 @@ function lsAdj(field,delta){
 
 function lsToggleBeer(){
   ls.holes[ls.current].beer=!ls.holes[ls.current].beer;
+  // Duffy cameo when beer is logged
+  if (ls.holes[ls.current].beer) {
+    const beerBtn = document.getElementById('lsBeerBtn');
+    if (beerBtn) {
+      const orig = beerBtn.innerHTML;
+      beerBtn.innerHTML = `<img src="/duffy-beer.png" style="width:22px;height:22px;object-fit:contain;vertical-align:middle;margin-right:0.3rem" /> Beer logged! 🍺`;
+      setTimeout(() => { beerBtn.innerHTML = orig; }, 2000);
+    }
+  }
   lsRenderHole();
   lsPersist();
 }
@@ -6849,6 +6810,7 @@ function renderStats(){
     ${tile('☝️',bogeys,'Bogeys')}${tile('❌',doubles,'Double+')}
     ${tile('🍺',totalBeers,'Total Beers',`Avg ${avgBeers}/round`,true)}
     ${tile('🍻',mostBeers,'Most in a Round','',true)}
+    ${totalBeers > 0 ? `<div class="stat-tile" style="grid-column:1/-1;display:flex;align-items:center;gap:0.75rem;justify-content:center;background:rgba(201,168,76,0.05)"><img src="/duffy-beer.png" style="width:48px;height:48px;object-fit:contain" /><div style="font-size:0.82rem;color:var(--cream-muted);font-style:italic">"${totalBeers} beers and counting. That's what I'm talking about." — Duffy</div></div>` : ''}
   `;
 
   // Trend legend
