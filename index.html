@@ -1285,10 +1285,30 @@ nav { padding: 0.8rem 1rem !important; }
     <!-- Club cards grid -->
     <div id="clubGrid" style="display:flex;flex-direction:column;gap:0.6rem;margin-bottom:2rem"></div>
 
-    <!-- Putting guide -->
-    <div class="card" style="margin-bottom:1rem">
-      <div class="card-title">🟣 Putting Distance Guide</div>
-      <div id="puttingGuide"></div>
+    <!-- Chip's Tips -->
+    <div style="display:flex;align-items:flex-start;gap:1rem;background:rgba(201,168,76,0.06);border:1px solid rgba(201,168,76,0.2);border-radius:14px;padding:1rem;margin-bottom:1rem">
+      <img src="/chips-tips.png" alt="Chip's Tips" style="width:90px;height:90px;object-fit:contain;flex-shrink:0" />
+      <div>
+        <div style="font-family:'Playfair Display',serif;font-size:1rem;color:var(--gold);margin-bottom:0.5rem">Chip's Tips</div>
+        <ul style="font-size:0.82rem;color:var(--cream-muted);line-height:1.9;padding-left:1.1rem;margin:0">
+          <li>Aim for the <strong style="color:var(--cream)">middle of the green</strong> — everything else is details.</li>
+          <li><strong style="color:var(--cream)">Speed kills more putts than line.</strong> Get the pace right first.</li>
+          <li>On par 3s, one club <strong style="color:var(--cream)">more than you think</strong> — most amateurs are short.</li>
+          <li>When in doubt, <strong style="color:var(--cream)">take one extra club</strong> and swing easy.</li>
+          <li>The shot you <strong style="color:var(--cream)">don't hit</strong> can't hurt you — course management wins rounds.</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Putting guide — collapsible -->
+    <div class="expand-card" id="expandPuttingGuide" style="margin-bottom:1rem">
+      <div class="expand-header" onclick="toggleExpand('expandPuttingGuide')">
+        <div class="expand-title">🟣 Putting Distance Guide</div>
+        <span class="expand-chevron">▼</span>
+      </div>
+      <div class="expand-body" style="padding:1rem">
+        <div id="puttingGuide"></div>
+      </div>
     </div>
 
     <!-- Short game golden rules -->
