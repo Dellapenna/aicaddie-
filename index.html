@@ -926,9 +926,7 @@ nav { padding: 0.8rem 1rem !important; }
       <button class="ls-extra-btn" id="lsHazBtn" onclick="lsToggleHazard()" title="Hazard (sand/water)">
         <span class="ls-extra-icon">⚠️</span>Hazard
       </button>
-      <button class="ls-extra-btn" id="lsScratchBtn" onclick="lsToggleScratch()" title="Scratch hole (won't count)">
-        <span class="ls-extra-icon">✕</span>Scratch
-      </button>
+
     </div>
 
     <div class="ls-nav">
@@ -4134,7 +4132,7 @@ const saveCourseCache=c=>localStorage.setItem(COURSE_CACHE,JSON.stringify(c));
 // ─────────────────────────────────────
 //  STATE
 // ─────────────────────────────────────
-let selectedCourse=null,selectedTee=null,beerState={},girState={},hazardState={},scratchState={},fairwayState={},searchTimeout=null,currentQuery='',pendingPhoto=null;
+let selectedCourse=null,selectedTee=null,beerState={},girState={},hazardState={},fairwayState={},searchTimeout=null,currentQuery='',pendingPhoto=null;
 let selectedGolfers=[]; // array of golfer names for group rounds
 let selectedWeather='',selectedConditions='';
 let _golfers=[],_rounds=[];
@@ -4401,8 +4399,8 @@ function playingHandicap(golferName) {
 }
 function buildScorecard(){
   const n=parseInt(document.getElementById('holesCount').value);
-  beerState={};girState={};hazardState={};scratchState={};fairwayState={};
-  for(let i=1;i<=n;i++){beerState[i]=false;girState[i]=false;hazardState[i]=false;scratchState[i]=false;fairwayState[i]=false;}
+  beerState={};girState={};hazardState={};fairwayState={};
+  for(let i=1;i<=n;i++){beerState[i]=false;girState[i]=false;hazardState[i]=false;fairwayState[i]=false;}
   const showYards=!!(selectedTee?.holes);
   const showSI=!!(selectedTee?.holes);
   // Get playing handicap for selected golfer
@@ -4432,20 +4430,9 @@ function toggleHazard(h){
   btn.classList.toggle('haz-active',hazardState[h]);
   updateLiveSummary();
 }
-function toggleScratch(h){
-  scratchState[h]=!scratchState[h];
-  const btn=document.getElementById('scratch_'+h);
-  btn.classList.toggle('active',scratchState[h]);
-  btn.classList.toggle('scratch-active',scratchState[h]);
-  // Dim the entire hole column visually
-  const scoreEl=document.getElementById('score_'+h);
-  const puttsEl=document.getElementById('putts_'+h);
-  if(scoreEl) scoreEl.style.opacity=scratchState[h]?'0.35':'1';
-  if(puttsEl) puttsEl.style.opacity=scratchState[h]?'0.35':'1';
-  updateLiveSummary();
-}
+
 function buildTable(from,to,showYards,showSI,pHcp){
-  let parRow='',scoreRow='',puttsRow='',beerRow='',yardRow='',siRow='',netRow='',girRow='',hazRow='',scratchRow='',fairwayRow='',yardTotal=0;
+  let parRow='',scoreRow='',puttsRow='',beerRow='',yardRow='',siRow='',netRow='',girRow='',hazRow='',fairwayRow='',yardTotal=0;
   for(let h=from;h<=to;h++){
     const{par,yards,si}=getParsForHole(h);
     const strokes=showSI&&si&&pHcp?strokesOnHole(si,pHcp):0;
@@ -4456,7 +4443,6 @@ function buildTable(from,to,showYards,showSI,pHcp){
     girRow    +=`<td><button class="sc-toggle" id="gir_${h}" onclick="toggleGir(${h})" title="Greens in Regulation">🎯</button></td>`;
     hazRow    +=`<td><button class="sc-toggle" id="haz_${h}" onclick="toggleHazard(${h})" title="Hazard (sand/water)">⚠️</button></td>`;
     fairwayRow+=`<td><button class="sc-toggle" id="fairway_${h}" onclick="toggleFairway(${h})" title="Fairway hit"${par===3?' disabled style="opacity:0.2;cursor:default"':''}>🏁</button></td>`;
-    scratchRow+=`<td><button class="sc-toggle" id="scratch_${h}" onclick="toggleScratch(${h})" title="Scratch this hole (excluded from score)">✕</button></td>`;
     if(showYards){yardRow+=`<td>${yards||'—'}</td>`;yardTotal+=yards||0;}
     if(showSI){
       const dot=strokes>0?`<span style="color:var(--gold);font-size:0.7rem"> ${'●'.repeat(strokes)}</span>`:'';
@@ -4472,7 +4458,6 @@ function buildTable(from,to,showYards,showSI,pHcp){
   girRow    +=`<td id="girTot_${label}" style="color:#6fcf97">—</td>`;
   hazRow    +=`<td id="hazTot_${label}" style="color:#f59e0b">—</td>`;
   fairwayRow+=`<td id="fairwayTot_${label}" style="color:#60a5fa">—</td>`;
-  scratchRow+=`<td id="scratchTot_${label}" style="color:#f87171">—</td>`;
   if(showYards)yardRow+=`<td>${yardTotal||'—'}</td>`;
   if(showSI){siRow+=`<td style="font-size:0.72rem;color:var(--cream-muted)">SI</td>`;netRow+=`<td id="netTot_${label}" style="color:#6fcf97">—</td>`;}
   const headers=Array.from({length:to-from+1},(_,i)=>`<th>${from+i}</th>`).join('');
@@ -4492,7 +4477,6 @@ function buildTable(from,to,showYards,showSI,pHcp){
       <tr><td style="color:#6fcf97;font-size:0.72rem;font-weight:600">GIR 🎯</td>${girRow}</tr>
       <tr><td style="color:#f59e0b;font-size:0.72rem;font-weight:600">Hazard ⚠️</td>${hazRow}</tr>
       <tr><td style="color:#60a5fa;font-size:0.72rem;font-weight:600">Fairway 🏁</td>${fairwayRow}</tr>
-      <tr><td style="color:#f87171;font-size:0.72rem;font-weight:600">Scratch ✕</td>${scratchRow}</tr>
     </tbody></table>`;
 }
 function lockPars(locked){
@@ -4529,8 +4513,8 @@ function updateLiveSummary(){
       const pt=parseInt(document.getElementById('putts_'+h)?.value)||0;
       const {si}=getParsForHole(h);
       const strokes=si&&pHcp?strokesOnHole(si,pHcp):0;
-      const scratched=scratchState[h]||false;
-      if(scratched){gScratch++;scratchedCount++;continue;} // skip scratched holes from all totals
+      const scratched = !document.getElementById('score_'+h)?.value;
+      if(scratched){gScratch++;scratchedCount++;continue;} // auto-scratch if no score entered
       gPar+=p;
       if(!isNaN(s)){
         gScore+=s;holesPlayed++;
@@ -4573,7 +4557,7 @@ function updateLiveSummary(){
   const netDiff=netHoles>0?totalNet-totalPar:null;
   const netStr=netDiff!==null?(netDiff>0?`+${netDiff}`:netDiff===0?'E':`${netDiff}`):'—';
   const netInfo=pHcp&&netHoles>0?` &nbsp;|&nbsp; 🟢 Net: ${totalNet} (${netStr})`:'';
-  const scratchInfo=scratchedCount>0?` &nbsp;|&nbsp; <span style="color:#f87171">✕ ${scratchedCount} scratched</span>`:'';
+  const scratchInfo=scratchedCount>0?` &nbsp;|&nbsp; <span style="color:var(--cream-muted)">${scratchedCount} skipped</span>`:'';
   const girInfo=totalGir>0?` &nbsp;|&nbsp; 🎯 ${totalGir} GIR`:'';
   const hazInfo=totalHaz>0?` &nbsp;|&nbsp; ⚠️ ${totalHaz} hazard${totalHaz!==1?'s':''}`:'';
   const fairwayInfo=totalFairway>0?` &nbsp;|&nbsp; 🏁 ${totalFairway}/${fairwayOpportunities} FIR`:'';
@@ -4600,7 +4584,7 @@ async function saveRound(){
     const strokes=si&&pHcpSave?strokesOnHole(si,pHcpSave):0;
     const score=parseInt(document.getElementById('score_'+h)?.value)||null;
     const net=score!==null&&strokes>=0?score-strokes:null;
-    holes.push({hole:h,par:parseInt(document.getElementById('par_'+h)?.value)||4,score,net,putts:parseInt(document.getElementById('putts_'+h)?.value)||0,beer:beerState[h]||false,gir:girState[h]||false,hazard:hazardState[h]||false,fairway:fairwayState[h]||false,scratched:scratchState[h]||false,si:si||null,strokes});
+    holes.push({hole:h,par:parseInt(document.getElementById('par_'+h)?.value)||4,score,net,putts:parseInt(document.getElementById('putts_'+h)?.value)||0,beer:beerState[h]||false,gir:girState[h]||false,hazard:hazardState[h]||false,fairway:fairwayState[h]||false,scratched:score===null,si:si||null,strokes});
   }
   const groupId = selectedGolfers.length > 1 ? 'grp_'+Date.now() : null;
   const notes   = document.getElementById('roundNotes')?.value?.trim()||null;
@@ -4670,15 +4654,14 @@ function clearScorecard(){
   const n=parseInt(document.getElementById('holesCount').value);
   for(let h=1;h<=n;h++){
     const s=document.getElementById('score_'+h),b=document.getElementById('beer_'+h),p=document.getElementById('putts_'+h);
-    const g=document.getElementById('gir_'+h),hz=document.getElementById('haz_'+h),sc=document.getElementById('scratch_'+h),fw=document.getElementById('fairway_'+h);
+    const g=document.getElementById('gir_'+h),hz=document.getElementById('haz_'+h),fw=document.getElementById('fairway_'+h);
     if(s){s.value='';s.className='';s.style.opacity='1';}
     if(b){b.classList.remove('active');b.style.opacity='0.3';}
     if(p){p.value='';p.style.opacity='1';}
     if(g){g.classList.remove('active','gir-active');}
     if(hz){hz.classList.remove('active','haz-active');}
-    if(sc){sc.classList.remove('active','scratch-active');}
     if(fw){fw.classList.remove('active','fairway-active');}
-    beerState[h]=false;girState[h]=false;hazardState[h]=false;scratchState[h]=false;fairwayState[h]=false;
+    beerState[h]=false;girState[h]=false;hazardState[h]=false;fairwayState[h]=false;
   }
   // Re-open Round Details so user can set up a new round
   const card = document.getElementById('expandRoundDetails');
@@ -4705,7 +4688,7 @@ function launchLiveScore(){
   const tee=selectedTee?(selectedTee.tee_name||'Unknown'):document.getElementById('teeColor').value;
   const courseName=selectedCourse?(selectedCourse.club_name||selectedCourse.course_name):(document.getElementById('courseSearch').value.trim()||'Unknown Course');
 
-  const makeHoles = n => Array.from({length:n},(_,i)=>{const{par}=getParsForHole(i+1);return{hole:i+1,par,score:null,putts:0,beer:false,gir:false,hazard:false,fairway:false,scratched:false};});
+  const makeHoles = n => Array.from({length:n},(_,i)=>{const{par}=getParsForHole(i+1);return{hole:i+1,par,score:null,putts:0,beer:false,gir:false,hazard:false,fairway:false};});
   // Build per-golfer scorecards
   ls={
     golfers: selectedGolfers.map((name,gi)=>({ name, holes: makeHoles(n) })),
@@ -4814,14 +4797,14 @@ function renderLsGolferSwitcher() {
 function lsRenderHole(){
   const h=ls.holes[ls.current];
   document.getElementById('lsHoleNum').textContent=h.hole;
-  document.getElementById('lsHoleMeta').textContent=`Par ${h.par}${h.par===3?' · Short hole':h.par===5?' · Long hole':''}${h.scratched?' · ✕ Scratched':''}`;
+  document.getElementById('lsHoleMeta').textContent=`Par ${h.par}${h.par===3?' · Short hole':h.par===5?' · Long hole':''}${h.score===null&&h.hole<ls.current?' · No score':''}`;
 
   // Score display
   const sv=document.getElementById('lsScoreVal');
   sv.textContent=h.score===null?'—':h.score;
   sv.className='ls-counter-val';
-  if(h.scratched)sv.style.opacity='0.35'; else sv.style.opacity='1';
-  if(h.score!==null&&!h.scratched){const d=h.score-h.par;if(d<=-2)sv.classList.add('score-eagle');else if(d===-1)sv.classList.add('score-birdie');else if(d===1)sv.classList.add('score-bogey');else if(d===2)sv.classList.add('score-double');else if(d>2)sv.classList.add('score-worse');}
+  sv.style.opacity='1';
+  if(h.score!==null){const d=h.score-h.par;if(d<=-2)sv.classList.add('score-eagle');else if(d===-1)sv.classList.add('score-birdie');else if(d===1)sv.classList.add('score-bogey');else if(d===2)sv.classList.add('score-double');else if(d>2)sv.classList.add('score-worse');}
 
   document.getElementById('lsPuttsVal').textContent=h.putts;
 
@@ -4833,11 +4816,10 @@ function lsRenderHole(){
   const girBtn=document.getElementById('lsGirBtn');
   const hazBtn=document.getElementById('lsHazBtn');
   const fairwayBtn=document.getElementById('lsFairwayBtn');
-  const scrBtn=document.getElementById('lsScratchBtn');
   if(girBtn)girBtn.className='ls-extra-btn'+(h.gir?' on-gir':'');
   if(hazBtn)hazBtn.className='ls-extra-btn'+(h.hazard?' on-haz':'');
   if(fairwayBtn)fairwayBtn.className='ls-extra-btn'+(h.par===3?'':h.fairway?' on-fairway':'')+(h.par===3?' on-disabled':'');
-  if(scrBtn)scrBtn.className='ls-extra-btn'+(h.scratched?' on-scratch':'');
+
 
   // Nav buttons
   document.getElementById('lsPrevBtn').disabled=ls.current===0;
@@ -4846,7 +4828,7 @@ function lsRenderHole(){
 
   // Progress dots
   document.getElementById('lsProgress').innerHTML=ls.holes.map((hh,i)=>
-    `<div class="ls-prog-dot ${i<ls.current?'done':i===ls.current?'current':''}${hh.scratched?' scratched':''}"></div>`
+    `<div class="ls-prog-dot ${i<ls.current?'done':i===ls.current?'current':''}${hh.score===null&&i<ls.current?' scratched':''}"></div>`
   ).join('');
 }
 
@@ -4882,14 +4864,7 @@ function lsToggleHazard(){
   lsRenderHole();
   lsPersist();
 }
-function lsToggleScratch(){
-  const h=ls.holes[ls.current];
-  h.scratched=!h.scratched;
-  // If scratching, clear the score so it doesn't count
-  if(h.scratched){ h.score=null; h.putts=0; }
-  lsRenderHole();
-  lsPersist();
-}
+
 
 function lsNav(dir){
   if(dir===1&&ls.current===ls.totalHoles-1){lsShowSummary();return;}
@@ -4902,7 +4877,7 @@ function lsShowSummary(){
   document.getElementById('lsHoleView').style.display='none';
   document.getElementById('lsSummaryView').style.display='flex';
 
-  const activeHoles=ls.holes.filter(h=>!h.scratched);
+  const activeHoles=ls.holes.filter(h=>h.score!==null);
   const totalScore=activeHoles.reduce((s,h)=>s+(h.score||0),0);
   const totalPar=activeHoles.reduce((s,h)=>s+h.par,0);
   const totalPutts=activeHoles.reduce((s,h)=>s+(h.putts||0),0);
@@ -4911,7 +4886,7 @@ function lsShowSummary(){
   const totalHaz=activeHoles.filter(h=>h.hazard).length;
   const totalFairway=activeHoles.filter(h=>h.fairway).length;
   const fairwayOpp=activeHoles.filter(h=>h.par!==3).length;
-  const scratchedCount=ls.holes.filter(h=>h.scratched).length;
+  const scratchedCount=ls.holes.filter(h=>h.score===null).length;
   const diff=totalScore-totalPar;
   const diffStr=diff>0?`+${diff}`:diff===0?'E':`${diff}`;
 
@@ -4954,7 +4929,7 @@ async function lsSaveRound(){
   for (const gData of ls.golfers) {
     const ok = await commitRound({
       golfer:gData.name, courseName:ls.course, date:ls.date, tee:ls.tee,
-      holes:gData.holes, slope:ls.slope, rating:ls.rating, courseId:ls.courseId,
+      holes:gData.holes.map(h=>({...h,scratched:h.score===null})), slope:ls.slope, rating:ls.rating, courseId:ls.courseId,
       groupId:ls.groupId, notes, weather, conditions
     });
     if (!ok) allSaved = false;
