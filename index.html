@@ -2353,11 +2353,9 @@ const ANON_WORDS    = ['EAGLE','BIRDIE','BOGEY','BIRCH','LINKS','CADDY','IRON','
 // Override DOMContentLoaded to add auth check
 const _origInit = document.addEventListener.bind(document);
 document.addEventListener('DOMContentLoaded', async () => {
-  // Render avatar color pickers
   renderAvatarPicker('avatarColors', color => { _onboardColor = color; });
   renderAvatarPicker('profileAvatarColors', color => { _onboardColor = color; saveProfileColor(color); });
 
-  // Close user menu on outside click
   document.addEventListener('click', e => {
     if (!e.target.closest('.nav-user') && !e.target.closest('#userMenu')) {
       const m = document.getElementById('userMenu');
@@ -2365,12 +2363,34 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  // Listen for auth state changes (handles Google OAuth redirect back)
+  // Guard against double-init from both getSession and onAuthStateChange firing
+  let _initDone = false;
+  async function safeLoadProfile() {
+    if (_initDone) return;
+    _initDone = true;
+    await loadProfile();
+  }
+
+  // Loader timeout — if nothing happens in 15s show error with refresh button
+  const loaderTimeout = setTimeout(() => {
+    if (document.getElementById('appLoader')?.style.display !== 'none') {
+      const e = document.getElementById('loaderError');
+      if (e) {
+        e.innerHTML = 'Taking longer than usual.<br><button onclick="location.reload()" style="margin-top:0.75rem;background:#C9A84C;color:#1B3A2D;border:none;border-radius:6px;padding:0.5rem 1.25rem;font-weight:700;cursor:pointer;font-size:0.85rem">Tap to Refresh</button>';
+        e.style.display = 'block';
+      }
+      const loadingText = document.getElementById('appLoader')?.querySelector('[data-loading-text]');
+      if (loadingText) loadingText.textContent = 'Taking longer than usual…';
+    }
+  }, 15000);
+
+  // Auth state listener — handles OAuth redirects
   _supabase.auth.onAuthStateChange(async (event, session) => {
     if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
       _currentUser = session.user;
-      if (!_currentProfile) await loadProfile();
+      await safeLoadProfile();
     } else if (event === 'SIGNED_OUT') {
+      _initDone = false;
       _currentUser = null;
       _currentProfile = null;
       showAuthScreen();
@@ -2383,13 +2403,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (error) throw error;
     if (session) {
       _currentUser = session.user;
-      await loadProfile();
+      await safeLoadProfile();
     } else {
       showAuthScreen();
     }
+    clearTimeout(loaderTimeout);
   } catch(e) {
+    clearTimeout(loaderTimeout);
     console.error('Auth init error:', e);
-    showLoaderError('Could not connect. Check your internet connection and try again. Error: ' + e.message);
+    showLoaderError('Could not connect. Check your internet and try again.');
+    const e2 = document.getElementById('loaderError');
+    if (e2) e2.innerHTML += '<br><button onclick="location.reload()" style="margin-top:0.75rem;background:#C9A84C;color:#1B3A2D;border:none;border-radius:6px;padding:0.5rem 1.25rem;font-weight:700;cursor:pointer;font-size:0.85rem">Tap to Refresh</button>';
   }
 });
 
@@ -4291,17 +4315,24 @@ function calcWHS(rounds){
 async function loadAll(){
   const uid = _currentUser?.id;
   const userParam = uid ? `user_id=eq.${uid}` : '';
-  [_golfers,_rounds]=await Promise.all([sbGet('golfers',userParam),sbGet('rounds',userParam)]);
+  // Race against a 12s timeout so the app never hangs forever
+  const timeout = new Promise((_,reject) => setTimeout(()=>reject(new Error('Load timed out')), 12000));
+  [_golfers,_rounds] = await Promise.race([
+    Promise.all([sbGet('golfers',userParam), sbGet('rounds',userParam)]),
+    timeout.then(()=>{throw new Error('Load timed out');})
+  ]);
   refreshGolferDropdowns();
   syncAnalyticsFilter && syncAnalyticsFilter();
 }
 
 function setNavStatus(s){
   const l=document.getElementById('navLogo');
-  if(s==='loading')l.innerHTML='The Caddie <span>/ Golf Tracker &nbsp;<span style="font-size:0.7rem;color:var(--cream-muted)">connecting…</span></span>';
-  else if(s==='live')l.innerHTML='The Caddie <span>/ Golf Tracker &nbsp;<span class="live-dot"></span></span>';
-  else if(s==='error')l.innerHTML='The Caddie <span>/ Golf Tracker &nbsp;<span style="font-size:0.7rem;color:#eb5757">offline</span></span>';
-  else l.innerHTML='The Caddie <span>/ Golf Tracker</span>';
+  if(!l) return;
+  const chipImg = `<img src="/chip-icon.png" alt="Chip" style="width:20px;height:20px;object-fit:contain;vertical-align:middle;margin-right:0.3rem"/>`;
+  if(s==='loading') l.innerHTML=`${chipImg}Chip <span>/ AI Caddie &nbsp;<span style="font-size:0.7rem;color:var(--cream-muted)">connecting…</span></span>`;
+  else if(s==='live') l.innerHTML=`${chipImg}Chip <span>/ AI Caddie &nbsp;<span class="live-dot"></span></span>`;
+  else if(s==='error') l.innerHTML=`${chipImg}Chip <span>/ AI Caddie &nbsp;<span style="font-size:0.7rem;color:#eb5757">offline</span></span>`;
+  else l.innerHTML=`${chipImg}Chip <span>/ AI Caddie</span>`;
 }
 
 // ─────────────────────────────────────
