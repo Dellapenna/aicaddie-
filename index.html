@@ -426,8 +426,12 @@ table.scorecard { width:100%; border-collapse:collapse; font-size:0.82rem; }
 .ls-scorecard-mini th { background:rgba(0,0,0,0.3); color:var(--gold); font-size:0.68rem; }
 
 /* MISC */
-.empty-state { text-align:center; padding:4rem 1rem; color:var(--cream-muted); }
+.empty-state { text-align:center; padding:3rem 1rem; color:var(--cream-muted); }
 .empty-state .icon { font-size:3.5rem; margin-bottom:1rem; opacity:0.5; }
+.chip-empty { text-align:center; padding:2.5rem 1rem; color:var(--cream-muted); }
+.chip-empty img { width:110px; height:110px; object-fit:contain; opacity:0.9; margin-bottom:0.75rem; display:block; margin-left:auto; margin-right:auto; }
+.chip-empty p { font-size:0.88rem; line-height:1.6; max-width:240px; margin:0 auto; }
+.chip-empty .chip-empty-quip { font-size:0.78rem; color:rgba(201,168,76,0.7); font-style:italic; margin-top:0.4rem; }
 .section-gap { margin-top:2rem; }
 .divider { border:none; border-top:1px solid var(--border); margin:2rem 0; }
 .page-header { font-family:'Playfair Display',serif; font-size:1.4rem; color:var(--gold); margin-bottom:1.5rem; }
@@ -2733,7 +2737,7 @@ async function renderGroupsPage() {
   await loadGroups();
   const el = document.getElementById('groupsList');
   if (!_myGroups.length) {
-    el.innerHTML = `<div class="empty-state"><div class="icon">👥</div><p>You haven't joined any groups yet.<br>Create one or join with an invite code.</p></div>`;
+    el.innerHTML = chipEmpty("No groups yet.", "Create one or join with an invite code.");
     return;
   }
   el.innerHTML = '';
@@ -3038,7 +3042,7 @@ async function renderNational() {
 
   const { data, error } = await _supabase.from('national_leaderboard').select('*');
   if (error || !data?.length) {
-    el.innerHTML = '<div class="empty-state"><div class="icon">🌍</div><p>No golfers on the leaderboard yet.</p></div>';
+    el.innerHTML = chipEmpty('No golfers on the leaderboard yet.', 'Be the first to log a round.');
     document.getElementById('lbChart').innerHTML = '';
     return;
   }
@@ -3116,6 +3120,14 @@ function chipQuip(context) {
   };
   const arr = quips[context] || quips.chat;
   return arr[Math.floor(Math.random() * arr.length)];
+}
+
+function chipEmpty(message, quip='', extraStyle='') {
+  return `<div class="chip-empty" style="${extraStyle}">
+    <img src="/chip-swing.png" alt="Chip" />
+    <p>${message}</p>
+    ${quip ? `<div class="chip-empty-quip">${quip}</div>` : ''}
+  </div>`;
 }
 
 function setChipExpression(expression, quip) {
@@ -3652,6 +3664,20 @@ async function runSwingAnalysis() {
   } finally { btn.disabled=false; }
 }
 
+async function loadImageAsBase64(url) {
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const blob = await res.blob();
+    return new Promise(resolve => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(blob);
+    });
+  } catch(e) { return null; }
+}
+
 async function downloadSwingPDF() {
   if (!_swingFrames.length) { showToast('No frames to export yet'); return; }
   showToast('⏳ Building PDF…');
@@ -3675,18 +3701,21 @@ async function downloadSwingPDF() {
 
   // ── Header ──
   doc.setFillColor(10, 31, 20);
-  doc.rect(0, 0, W, 28, 'F');
+  doc.rect(0, 0, W, 30, 'F');
+  // Chip icon in header
+  const chipImgData = await loadImageAsBase64('/chip-icon.png');
+  if (chipImgData) doc.addImage(chipImgData, 'PNG', W - margin - 22, 3, 22, 22);
   doc.setTextColor(201, 168, 76);
   doc.setFontSize(20);
   doc.setFont('helvetica', 'bold');
   doc.text('The Caddie', margin, 12);
-  doc.setFontSize(10);
+  doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(220, 210, 190);
-  doc.text('Swing Analysis Report', margin, 18);
+  doc.text('Swing Analysis Report', margin, 19);
   const dateStr = new Date().toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
-  doc.text(`${_swingClub} · ${_swingAngle} · ${dateStr}`, margin, 24);
-  y = 36;
+  doc.text(`${_swingClub} · ${_swingAngle} · ${dateStr}`, margin, 25);
+  y = 38;
 
   // ── Report Card ──
   const scored = _swingFrames.filter(f => f.scores);
@@ -4011,7 +4040,7 @@ async function loadCartGirlSightings(append = false) {
   if (!append) el.innerHTML = '';
 
   if (!data?.length && !append) {
-    el.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="icon">🍺</div><p>No sightings yet — be the first!</p></div>`;
+    el.innerHTML = chipEmpty("No sightings yet.", "Be the first to submit one.", "grid-column:1/-1");
     document.getElementById('cgLoadMoreWrap').style.display = 'none';
     return;
   }
@@ -5143,7 +5172,7 @@ function renderHistory(){
   const loadMoreBtn = document.getElementById('historyLoadMore');
 
   if (!rounds.length) {
-    el.innerHTML = `<div class="empty-state"><div class="icon">⛳</div><p>No rounds match your filters.</p></div>`;
+    el.innerHTML = chipEmpty("No rounds match your filters.", "Try adjusting the filters above.");
     if (countEl) countEl.style.display = 'none';
     if (loadMoreBtn) loadMoreBtn.style.display = 'none';
     return;
@@ -6487,7 +6516,10 @@ async function downloadDebrief(mode) {
 
   // ── Header ──
   doc.setFillColor(10,31,20);
-  doc.rect(0,0,W,30,'F');
+  doc.rect(0,0,W,32,'F');
+  // Chip icon
+  const chipImg = await loadImageAsBase64('/chip-icon.png');
+  if (chipImg) doc.addImage(chipImg, 'PNG', W - margin - 24, 4, 24, 24);
   doc.setTextColor(201,168,76);
   doc.setFontSize(22); doc.setFont('helvetica','bold');
   doc.text('The Caddie',margin,13);
@@ -6495,8 +6527,8 @@ async function downloadDebrief(mode) {
   doc.setTextColor(220,210,190);
   doc.text(title,margin,20);
   doc.setFontSize(8.5); doc.setTextColor(180,170,150);
-  doc.text(`${golferName ? golferName+' · ' : ''}${dateStr}`,margin,26);
-  y = 38;
+  doc.text(`${golferName ? golferName+' · ' : ''}${dateStr}`,margin,27);
+  y = 40;
 
   // ── Debrief mode: round stats card ──
   if (mode === 'debrief') {
@@ -6677,7 +6709,7 @@ function renderStats(){
   const grid=document.getElementById('statsGrid');
   document.getElementById('statsExtra').innerHTML='';
   if(!rounds.length){
-    grid.innerHTML=`<div class="empty-state" style="grid-column:1/-1"><div class="icon">📊</div><p>No rounds yet.</p></div>`;
+    grid.innerHTML=chipEmpty("No rounds yet.", "Log your first round to see your stats.", "grid-column:1/-1");
     ['scoreChart','beerChart','puttChart'].forEach(id=>document.getElementById(id).innerHTML=''); return;
   }
   const parseHoles=r=>{ try{ return typeof r.holes==='string'?JSON.parse(r.holes||'[]'):(r.holes||[]); }catch(e){return[];} };
@@ -6856,7 +6888,7 @@ async function renderLeaderboard(){
       );
       const members = await memRes.json();
       if (!members?.length) {
-        el.innerHTML = `<div class="empty-state"><div class="icon">👥</div><p>No members found in this group.</p></div>`;
+        el.innerHTML = chipEmpty("No members found in this group.", "Invite your crew with the group code.");
         document.getElementById('lbChart').innerHTML = ''; return;
       }
 
@@ -6896,7 +6928,7 @@ async function renderLeaderboard(){
   }
 
   if (!rows.length) {
-    el.innerHTML = `<div class="empty-state"><div class="icon">🏆</div><p>No rounds yet.</p></div>`;
+    el.innerHTML = chipEmpty("No rounds on the board yet.", "Log a round to get on the leaderboard.");
     document.getElementById('lbChart').innerHTML = ''; return;
   }
 
