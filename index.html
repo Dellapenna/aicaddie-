@@ -7,12 +7,12 @@
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-<meta name="apple-mobile-web-app-title" content="The Caddie" />
+<meta name="apple-mobile-web-app-title" content="Chip" />
 <meta name="description" content="Track your golf game, handicap, stats and compete with friends." />
 <link rel="manifest" href="/manifest.json" />
 <link rel="apple-touch-icon" href="/icon-192.png" />
 <link rel="apple-touch-icon" sizes="512x512" href="/icon-512.png" />
-<title>The Caddie — Golf Tracker</title>
+<title>Chip — AI Golf Caddie</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet" />
@@ -737,8 +737,11 @@ nav { padding: 0.8rem 1rem !important; }
 <!-- AUTH SCREEN -->
 <div id="authScreen">
   <div class="auth-card">
-    <div class="auth-logo">⛳ The Caddie</div>
-    <div class="auth-sub">Track your game. Own your data.</div>
+    <div style="text-align:center;margin-bottom:1rem">
+      <img src="/chip-happy.png" alt="Chip" style="width:100px;height:100px;object-fit:contain;display:block;margin:0 auto 0.75rem" />
+      <div class="auth-logo">Chip</div>
+      <div class="auth-sub">Your AI Golf Caddie</div>
+    </div>
     <div class="auth-tabs">
       <div class="auth-tab active" onclick="switchAuthTab('login')">Sign In</div>
       <div class="auth-tab" onclick="switchAuthTab('signup')">Sign Up</div>
@@ -762,8 +765,11 @@ nav { padding: 0.8rem 1rem !important; }
   <div class="auth-card">
     <!-- Step 1: Profile setup -->
     <div class="onboard-step active" id="onboard-step-1">
-      <div class="onboard-title">Welcome! 🏌️</div>
-      <div class="onboard-sub">Let's set up your golfer profile. This takes 30 seconds.</div>
+      <div style="text-align:center;margin-bottom:1rem">
+        <img src="/chip-excited.png" alt="Chip" style="width:80px;height:80px;object-fit:contain;display:block;margin:0 auto 0.5rem" />
+        <div class="onboard-title">Welcome! I'm Chip.</div>
+        <div class="onboard-sub">Your AI Golf Caddie. Let's set up your profile — takes 30 seconds.</div>
+      </div>
       <div id="onboardError" class="auth-error"></div>
       <input class="auth-input" type="text" id="onboardName" placeholder="Your display name" maxlength="30" />
       <div style="margin-bottom:0.75rem">
@@ -777,12 +783,15 @@ nav { padding: 0.8rem 1rem !important; }
         <label style="font-size:0.75rem;font-weight:600;color:var(--cream-muted);text-transform:uppercase;letter-spacing:0.06em;display:block;margin-bottom:0.5rem">Pick your color</label>
         <div class="avatar-colors" id="avatarColors"></div>
       </div>
-      <button class="auth-btn auth-btn-gold" onclick="completeOnboarding()">Create Profile →</button>
+      <button class="auth-btn auth-btn-gold" onclick="completeOnboarding()">Let's Go →</button>
     </div>
     <!-- Step 2: Anonymous ID reveal -->
     <div class="onboard-step" id="onboard-step-2">
-      <div class="onboard-title">Your Tour Card 🏆</div>
-      <div class="onboard-sub">You're on the National Leaderboard under this anonymous ID. Your real name only shows to your groups.</div>
+      <div style="text-align:center;margin-bottom:1rem">
+        <img src="/chip-wink.png" alt="Chip" style="width:80px;height:80px;object-fit:contain;display:block;margin:0 auto 0.5rem" />
+        <div class="onboard-title">Your Tour Card 🏆</div>
+        <div class="onboard-sub">You're on the National Leaderboard under this handle. Your real name only shows to your groups.</div>
+      </div>
       <div class="anon-id-display">
         <div class="aid" id="anonIdDisplay"></div>
         <div class="aid-sub">Your national leaderboard handle</div>
@@ -802,14 +811,18 @@ nav { padding: 0.8rem 1rem !important; }
 </div>
 
 <div id="appLoader" style="position:fixed;inset:0;background:#1B3A2D;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;font-family:Inter,sans-serif">
-  <div style="font-family:'Playfair Display',serif;font-size:2.5rem;color:#C9A84C;margin-bottom:0.5rem">⛳</div>
-  <div style="font-family:'Playfair Display',serif;font-size:1.5rem;color:#C9A84C">The Caddie</div>
-  <div style="font-size:0.8rem;color:#C8BCA8;margin-top:0.75rem">Loading…</div>
+  <img src="/chip-happy.png" alt="Chip" style="width:100px;height:100px;object-fit:contain;margin-bottom:0.75rem" />
+  <div style="font-family:'Playfair Display',serif;font-size:1.8rem;color:#C9A84C">Chip</div>
+  <div style="font-size:0.82rem;color:#a89a7c;text-transform:uppercase;letter-spacing:0.1em;margin-top:0.2rem">Your AI Golf Caddie</div>
+  <div style="font-size:0.78rem;color:#C8BCA8;margin-top:0.75rem">Loading…</div>
   <div id="loaderError" style="display:none;margin-top:1.5rem;max-width:300px;text-align:center;font-size:0.8rem;color:#e74c3c;background:rgba(192,57,43,0.15);border:1px solid rgba(192,57,43,0.4);border-radius:8px;padding:0.75rem"></div>
 </div>
 <!-- TOP BAR -->
 <nav style="display:none" id="topBar">
-  <div class="logo" id="navLogo">The Caddie <span>/ Golf Tracker</span></div>
+  <div class="logo" id="navLogo" style="display:flex;align-items:center;gap:0.5rem">
+    <img src="/chip-icon.png" alt="Chip" style="width:24px;height:24px;object-fit:contain" />
+    <span>Chip <span style="opacity:0.5;font-size:0.8em">/ AI Caddie</span></span>
+  </div>
   <div class="nav-user" id="navUser" onclick="toggleUserMenu()">
     <div class="nav-avatar" id="navAvatar" style="background:var(--gold)">?</div>
     <span class="nav-display-name" id="navDisplayName"></span>
