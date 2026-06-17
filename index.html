@@ -833,7 +833,7 @@ nav { padding: 0.8rem 1rem !important; }
     <button class="btab" id="btab-ai" onclick="showPage('ai',this)">
       <span class="btab-icon"><img src="/chip-icon.png" alt="Chip" style="width:24px;height:24px;object-fit:contain;vertical-align:middle;margin-top:-2px" /></span><span class="btab-label small">Chip</span>
     </button>
-    <button class="btab" id="btab-analytics" onclick="showPage('analytics',this)">
+    <button class="btab" id="btab-analytics" onclick="showPage('stats',this)">
       <span class="btab-icon">📈</span><span class="btab-label">Analytics</span>
     </button>
     <button class="btab" id="btab-more" onclick="toggleMoreMenu()">
@@ -850,7 +850,6 @@ nav { padding: 0.8rem 1rem !important; }
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.6rem">
       <button class="more-item" onclick="showPage('leaderboard',null);toggleMoreMenu()"><span>🏆</span> Board</button>
       <button class="more-item" onclick="showPage('history',null);toggleMoreMenu()"><span>📋</span> History</button>
-      <button class="more-item" onclick="showPage('stats',null);toggleMoreMenu()"><span>📊</span> Stats</button>
       <button class="more-item" onclick="showPage('groups',null);toggleMoreMenu()"><span>👥</span> Groups</button>
       <button class="more-item" onclick="showPage('cartgirl',null);toggleMoreMenu()"><span>🍺</span> Cart Girl</button>
       <button class="more-item" onclick="showPage('games',null);toggleMoreMenu()"><span>🎮</span> Games</button>
@@ -1177,25 +1176,93 @@ nav { padding: 0.8rem 1rem !important; }
   </div>
 
   <!-- STATS -->
+  <!-- ANALYTICS (merged Stats + Analytics + Badges) -->
   <div id="page-stats" class="page">
-    <div class="page-header">Performance Stats</div>
-    <div class="filter-bar">
+    <!-- Chip analytics header -->
+    <div class="chip-header">
+      <div id="chipAnalyticsAvatar"><img src="/chip-analytics.png" alt="Chip" width="80" height="80" style="object-fit:contain;display:block" /></div>
+      <div>
+        <div style="font-family:'Playfair Display',serif;font-size:1.4rem;color:var(--gold);line-height:1">Analytics</div>
+        <div style="font-size:0.72rem;color:var(--cream-muted);text-transform:uppercase;letter-spacing:0.1em">Know Your Game</div>
+        <div class="chip-bubble" id="chipAnalyticsQuip" style="margin-top:0.4rem">Your numbers don't lie.</div>
+      </div>
+    </div>
+
+    <!-- Golfer filter -->
+    <div class="filter-bar" style="margin-bottom:1rem">
       <label>Golfer:</label>
-      <select id="statsFilter" onchange="renderStats()"><option value="">All Golfers</option></select>
+      <select id="statsFilter" onchange="onStatsFilterChange()"><option value="">All Golfers</option></select>
     </div>
-    <div class="stats-grid" id="statsGrid"></div>
-    <div id="statsExtra"></div>
-    <div class="card chart-wrap">
-      <div class="chart-title">Score by Round (most recent 8)</div>
-      <div id="scoreChart"></div>
+
+    <!-- Top tabs -->
+    <div style="display:flex;gap:0.4rem;background:rgba(0,0,0,0.2);padding:0.35rem;border-radius:12px;margin-bottom:1.25rem">
+      <button class="ai-mode-btn active" id="anMainTab-stats"     onclick="switchAnMainTab('stats')">📊 Stats</button>
+      <button class="ai-mode-btn"        id="anMainTab-analytics" onclick="switchAnMainTab('analytics')">📈 Analytics</button>
+      <button class="ai-mode-btn"        id="anMainTab-badges"    onclick="switchAnMainTab('badges')">🏅 Badges</button>
     </div>
-    <div class="card chart-wrap section-gap">
-      <div class="chart-title">🍺 Beers by Round (most recent 8)</div>
-      <div id="beerChart"></div>
+
+    <!-- STATS PANEL -->
+    <div id="anMain-stats">
+      <div class="stats-grid" id="statsGrid"></div>
+      <div id="statsExtra"></div>
+      <div class="card chart-wrap">
+        <div class="chart-title">Score by Round (most recent 8)</div>
+        <div id="scoreChart"></div>
+      </div>
+      <div class="card chart-wrap section-gap">
+        <div class="chart-title">🍺 Beers by Round (most recent 8)</div>
+        <div id="beerChart"></div>
+      </div>
+      <div class="card chart-wrap section-gap">
+        <div class="chart-title">🟣 Putts by Round (most recent 8)</div>
+        <div id="puttChart"></div>
+      </div>
     </div>
-    <div class="card chart-wrap section-gap">
-      <div class="chart-title">🟣 Putts by Round (most recent 8)</div>
-      <div id="puttChart"></div>
+
+    <!-- ANALYTICS PANEL -->
+    <div id="anMain-analytics" style="display:none">
+      <div class="analytics-tabs" style="margin-bottom:1.5rem">
+        <button class="an-tab active" onclick="showAnalyticsTab('holes',this)">⛳ Hole Analytics</button>
+        <button class="an-tab" onclick="showAnalyticsTab('trends',this)">📉 Trends</button>
+        <button class="an-tab" onclick="showAnalyticsTab('strokes',this)">🎯 Strokes Gained</button>
+        <button class="an-tab" onclick="showAnalyticsTab('bests',this)">🏆 Personal Bests</button>
+      </div>
+      <div id="an-holes" class="an-panel">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1rem;margin-bottom:1.5rem">
+          <div class="card"><div class="card-title">🔴 3 Hardest Holes</div><div id="anHardest"></div></div>
+          <div class="card"><div class="card-title">🟢 3 Easiest Holes</div><div id="anEasiest"></div></div>
+          <div class="card"><div class="card-title">🟣 Best Putting Holes</div><div id="anBestPutts"></div></div>
+        </div>
+        <div class="card"><div class="card-title">Avg Score vs Par — All 18 Holes</div><div id="anHoleChart"></div></div>
+        <div class="card section-gap"><div class="card-title">Scoring Distribution by Hole</div><div id="anHoleDist" style="overflow-x:auto"></div></div>
+      </div>
+      <div id="an-trends" class="an-panel" style="display:none">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1rem;margin-bottom:1.5rem">
+          <div class="card"><div class="card-title">📊 Scoring Trend</div><div id="anScoreTrend"></div></div>
+          <div class="card"><div class="card-title">🏌️ Handicap Trajectory</div><div id="anHcpTrend"></div></div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1rem">
+          <div class="card"><div class="card-title">🟣 Putts Trend</div><div id="anPuttTrend"></div></div>
+          <div class="card"><div class="card-title">🍺 Beers Trend</div><div id="anBeerTrend"></div></div>
+        </div>
+      </div>
+      <div id="an-strokes" class="an-panel" style="display:none">
+        <div class="card" style="margin-bottom:1rem">
+          <div class="card-title">🎯 Strokes Gained vs Bogey Golfer Baseline</div>
+          <p style="font-size:0.78rem;color:var(--cream-muted);margin-bottom:1rem">Positive = better than a bogey golfer on that hole type.</p>
+          <div id="anSGSummary" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:0.75rem;margin-bottom:1.5rem"></div>
+          <div id="anSGChart"></div>
+        </div>
+        <div class="card"><div class="card-title">📋 Strokes Gained Detail</div><div id="anSGDetail"></div></div>
+      </div>
+      <div id="an-bests" class="an-panel" style="display:none">
+        <div id="anBests"></div>
+      </div>
+    </div>
+
+    <!-- BADGES PANEL -->
+    <div id="anMain-badges" style="display:none">
+      <div id="badgesGrid"></div>
     </div>
   </div>
 
@@ -1355,73 +1422,7 @@ nav { padding: 0.8rem 1rem !important; }
   </div>
 
   <!-- ANALYTICS -->
-  <div id="page-analytics" class="page">
-    <div class="page-header">📈 Analytics & Insights</div>
-    <div class="filter-bar">
-      <label>Golfer:</label>
-      <select id="analyticsFilter" onchange="renderAnalytics()"><option value="">All Golfers</option></select>
-    </div>
 
-    <!-- SUB TABS -->
-    <div class="analytics-tabs" style="margin-bottom:1.5rem">
-      <button class="an-tab active" onclick="showAnalyticsTab('holes',this)">⛳ Hole Analytics</button>
-      <button class="an-tab" onclick="showAnalyticsTab('trends',this)">📉 Trends</button>
-      <button class="an-tab" onclick="showAnalyticsTab('strokes',this)">🎯 Strokes Gained</button>
-      <button class="an-tab" onclick="showAnalyticsTab('bests',this)">🏆 Personal Bests</button>
-    </div>
-
-    <!-- HOLE ANALYTICS -->
-    <div id="an-holes" class="an-panel">
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1rem;margin-bottom:1.5rem">
-        <div class="card"><div class="card-title">🔴 3 Hardest Holes</div><div id="anHardest"></div></div>
-        <div class="card"><div class="card-title">🟢 3 Easiest Holes</div><div id="anEasiest"></div></div>
-        <div class="card"><div class="card-title">🟣 Best Putting Holes</div><div id="anBestPutts"></div></div>
-      </div>
-      <div class="card">
-        <div class="card-title">Avg Score vs Par — All 18 Holes</div>
-        <div id="anHoleChart"></div>
-      </div>
-      <div class="card section-gap">
-        <div class="card-title">Scoring Distribution by Hole</div>
-        <div id="anHoleDist" style="overflow-x:auto"></div>
-      </div>
-    </div>
-
-    <!-- TRENDS -->
-    <div id="an-trends" class="an-panel" style="display:none">
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1rem;margin-bottom:1.5rem">
-        <div class="card"><div class="card-title">📊 Scoring Trend</div><div id="anScoreTrend"></div></div>
-        <div class="card"><div class="card-title">🏌️ Handicap Trajectory</div><div id="anHcpTrend"></div></div>
-      </div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1rem">
-        <div class="card"><div class="card-title">🟣 Putts Trend</div><div id="anPuttTrend"></div></div>
-        <div class="card"><div class="card-title">🍺 Beers Trend</div><div id="anBeerTrend"></div></div>
-      </div>
-    </div>
-
-    <!-- STROKES GAINED -->
-    <div id="an-strokes" class="an-panel" style="display:none">
-      <div class="card" style="margin-bottom:1rem">
-        <div class="card-title">🎯 Strokes Gained vs Bogey Golfer Baseline</div>
-        <p style="font-size:0.78rem;color:var(--cream-muted);margin-bottom:1rem">Positive = better than a bogey golfer on that hole type. Based on your average score vs bogey golfer expected scores.</p>
-        <div id="anSGSummary" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:0.75rem;margin-bottom:1.5rem"></div>
-        <div id="anSGChart"></div>
-      </div>
-      <div class="card">
-        <div class="card-title">Scoring by Par Type</div>
-        <div id="anParType"></div>
-      </div>
-    </div>
-
-    <!-- PERSONAL BESTS -->
-    <div id="an-bests" class="an-panel" style="display:none">
-      <div id="anMilestones" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:1rem;margin-bottom:1.5rem"></div>
-      <div class="card">
-        <div class="card-title">🏆 Hall of Fame</div>
-        <div id="anHallOfFame"></div>
-      </div>
-    </div>
-  </div>
 
   <!-- IMPORT MODAL -->
   <div id="importModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:400;align-items:center;justify-content:center;padding:1rem">
@@ -3169,6 +3170,103 @@ function chipDone(context) {
 }
 
 // ─────────────────────────────────────
+// ─────────────────────────────────────
+//  ANALYTICS PAGE — tab switching
+// ─────────────────────────────────────
+function switchAnMainTab(tab) {
+  ['stats','analytics','badges'].forEach(t => {
+    document.getElementById('anMainTab-'+t)?.classList.toggle('active', t===tab);
+    const panel = document.getElementById('anMain-'+t);
+    if (panel) panel.style.display = t===tab ? 'block' : 'none';
+  });
+  const quips = {
+    stats:    ["Your numbers don't lie.","Let's see where shots are going.","Data doesn't sugarcoat it."],
+    analytics:["Every hole tells a story.","Let's find where you're losing shots.","Trends don't lie either."],
+    badges:   ["Earn them on the course.","Every badge has a story.","Good rounds start with smart decisions."],
+  };
+  const arr = quips[tab]||quips.stats;
+  const quipEl = document.getElementById('chipAnalyticsQuip');
+  if (quipEl) quipEl.textContent = arr[Math.floor(Math.random()*arr.length)];
+  if (tab==='stats')     renderStats();
+  if (tab==='analytics') { syncAnalyticsFilter(); renderAnalytics(); }
+  if (tab==='badges')    renderBadges();
+}
+
+function onStatsFilterChange() {
+  const v = document.getElementById('statsFilter').value;
+  const af = document.getElementById('analyticsFilter');
+  if (af) af.value = v;
+  renderStats();
+}
+
+// ─────────────────────────────────────
+//  BADGES
+// ─────────────────────────────────────
+const BADGES = [
+  { id:'birdie',    img:'/badge-birdie.png',    name:'Birdie Club',       desc:'3+ birdies in a single round',
+    check:(rounds)=>rounds.some(r=>{try{return(typeof r.holes==='string'?JSON.parse(r.holes):r.holes||[]).filter(h=>h.score&&(h.score-h.par)===-1).length>=3;}catch(e){return false;}}) },
+  { id:'eagle',     img:'/badge-eagle.png',     name:'Eagle Eye',         desc:'Make your first eagle',
+    check:(rounds)=>rounds.some(r=>{try{return(typeof r.holes==='string'?JSON.parse(r.holes):r.holes||[]).some(h=>h.score&&(h.score-h.par)<=-2);}catch(e){return false;}}) },
+  { id:'fairway',   img:'/badge-fairway.png',   name:'Fairway Finder',    desc:'70%+ fairways hit in a round',
+    check:(rounds)=>rounds.some(r=>{try{const h=(typeof r.holes==='string'?JSON.parse(r.holes):r.holes||[]).filter(h=>h.par!==3&&!h.scratched);return h.length&&h.filter(h=>h.fairway).length/h.length>=0.7;}catch(e){return false;}}) },
+  { id:'precision', img:'/badge-precision.png', name:'Precision',         desc:'80%+ greens in regulation in a round',
+    check:(rounds)=>rounds.some(r=>{try{const h=(typeof r.holes==='string'?JSON.parse(r.holes):r.holes||[]).filter(h=>!h.scratched);return h.length&&h.filter(h=>h.gir).length/h.length>=0.8;}catch(e){return false;}}) },
+  { id:'scramble',  img:'/badge-scramble.png',  name:'Scramble Hero',     desc:'Hit a hazard and still make par or better',
+    check:(rounds)=>rounds.some(r=>{try{return(typeof r.holes==='string'?JSON.parse(r.holes):r.holes||[]).some(h=>h.hazard&&h.score&&(h.score-h.par)<=0);}catch(e){return false;}}) },
+  { id:'hazard',    img:'/badge-hazard.png',    name:'Hazard Hero',       desc:'Complete a round with zero hazards',
+    check:(rounds)=>rounds.some(r=>{try{const h=(typeof r.holes==='string'?JSON.parse(r.holes):r.holes||[]).filter(h=>!h.scratched&&h.score);return h.length>=9&&h.every(h=>!h.hazard);}catch(e){return false;}}) },
+  { id:'streak',    img:'/badge-streak.png',    name:'Streak Master',     desc:'3 rounds in a row under your handicap',
+    check:(rounds,golfer,whs)=>{if(!whs||rounds.length<3)return false;const t=72+whs;for(let i=0;i<=rounds.length-3;i++){if(rounds[i].score<t&&rounds[i+1].score<t&&rounds[i+2].score<t)return true;}return false;} },
+  { id:'19th',      img:'/badge-19th.png',      name:'19th Hole Legend',  desc:'100 total beers logged',
+    check:(rounds)=>rounds.reduce((s,r)=>s+(r.beers||0),0)>=100 },
+  { id:'bestround', img:'/badge-bestround.png', name:'Best Round',        desc:'Log your personal best score',
+    check:(rounds)=>rounds.length>=5 },
+  { id:'century',   img:'/badge-century.png',   name:'Century Breaker',   desc:'Shoot under 100 on a full 18-hole round',
+    check:(rounds)=>rounds.some(r=>r.score>0&&r.score<100&&(r.holes_played||18)>=18) },
+];
+
+function renderBadges() {
+  const el = document.getElementById('badgesGrid');
+  if (!el) return;
+  const filter = document.getElementById('statsFilter')?.value||'';
+  const rounds = filter?_rounds.filter(r=>r.golfer===filter):_rounds;
+  const whs = calcWHS(rounds)?.hcp??null;
+  const earned=[], locked=[];
+  BADGES.forEach(b=>{ (b.check(rounds,'',whs)?earned:locked).push(b); });
+  const pct = Math.round(earned.length/BADGES.length*100);
+
+  el.innerHTML = `
+    <div style="background:var(--card-bg);border:1px solid var(--border);border-radius:12px;padding:1rem;margin-bottom:1.25rem">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.6rem">
+        <div style="font-weight:700;font-size:0.9rem">${earned.length} of ${BADGES.length} badges earned</div>
+        <div style="font-size:0.78rem;color:var(--cream-muted)">${pct}%</div>
+      </div>
+      <div style="height:8px;background:rgba(255,255,255,0.08);border-radius:4px;overflow:hidden">
+        <div style="height:100%;width:${pct}%;background:linear-gradient(90deg,var(--gold),var(--gold-light));border-radius:4px"></div>
+      </div>
+    </div>
+    ${earned.length?`
+    <div style="font-size:0.72rem;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:0.75rem">✅ Earned</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:1rem;margin-bottom:1.5rem">
+      ${earned.map(b=>`<div style="background:var(--card-bg);border:1px solid rgba(201,168,76,0.3);border-radius:12px;padding:1rem;text-align:center">
+        <img src="${b.img}" alt="${b.name}" style="width:72px;height:72px;object-fit:contain;display:block;margin:0 auto 0.5rem"/>
+        <div style="font-weight:700;font-size:0.8rem;color:var(--cream);margin-bottom:0.2rem">${b.name}</div>
+        <div style="font-size:0.68rem;color:var(--cream-muted);line-height:1.4">${b.desc}</div>
+      </div>`).join('')}
+    </div>`:''}
+    <div style="font-size:0.72rem;font-weight:700;color:var(--cream-muted);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:0.75rem">🔒 Not Yet Earned</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:1rem">
+      ${locked.map(b=>`<div style="background:var(--card-bg);border:1px solid var(--border);border-radius:12px;padding:1rem;text-align:center;opacity:0.5">
+        <div style="position:relative;display:inline-block;margin-bottom:0.5rem">
+          <img src="${b.img}" alt="${b.name}" style="width:72px;height:72px;object-fit:contain;display:block;filter:grayscale(1)"/>
+          <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:1.4rem">🔒</div>
+        </div>
+        <div style="font-weight:700;font-size:0.8rem;color:var(--cream-muted);margin-bottom:0.2rem">${b.name}</div>
+        <div style="font-size:0.68rem;color:var(--cream-muted);line-height:1.4">${b.desc}</div>
+      </div>`).join('')}
+    </div>`;
+}
+
 const _rangePills = {}; // groupId → value(s)
 
 function toggleRangePill(pill, groupId, mode) {
@@ -4219,7 +4317,7 @@ function startRealtime(){
       if(msg.event==='INSERT')_rounds.unshift(rec);
       if(msg.event==='DELETE')_rounds=_rounds.filter(r=>r.id!==old?.id);
       if(document.getElementById('page-history').classList.contains('active'))renderHistory();
-      if(document.getElementById('page-stats').classList.contains('active'))renderStats();
+      if(document.getElementById('page-stats').classList.contains('active')){ const t=document.querySelector('.ai-mode-btn.active[id^="anMainTab"]')?.id?.replace('anMainTab-',''); if(t==='stats')renderStats(); else if(t==='analytics')renderAnalytics(); else if(t==='badges')renderBadges(); }
       if(document.getElementById('page-leaderboard').classList.contains('active')){ if(_lbScope==='everyone')renderNational(); else renderLeaderboard(); }
     }
   };
@@ -4240,11 +4338,11 @@ function showPage(name,btn){
   if(btab) btab.classList.add('active');
   else document.getElementById('btab-more')?.classList.add('active');
   if(name==='history')renderHistory();
-  if(name==='stats')renderStats();
+
   if(name==='leaderboard'){ populateLbGroupPicker().then(()=>{ switchLbScope(_lbScope); }); }
   if(name==='golfers')renderGolferRoster();
   if(name==='clubs'){ loadBag().then(()=>renderClubs()); }
-  if(name==='analytics'){syncAnalyticsFilter();renderAnalytics();}
+  if(name==='analytics'||name==='stats'){ switchAnMainTab('stats'); }
   if(name==='groups')renderGroupsPage();
   if(name==='profile'){ renderProfilePage(); renderGolferRoster(); }
   if(name==='admin')loadAdminData();
@@ -7338,6 +7436,7 @@ function showAnalyticsTab(tab, btn) {
 function syncAnalyticsFilter() {
   const filter = document.getElementById('analyticsFilter');
   const statsFilter = document.getElementById('statsFilter');
+  if (!filter) return;
   const opts = _golfers.map(g => `<option value="${esc(g.name)}">${esc(g.name)}</option>`).join('');
   filter.innerHTML = '<option value="">All Golfers</option>' + opts;
   if (statsFilter) filter.value = statsFilter.value || '';
