@@ -6836,7 +6836,26 @@ async function downloadDebrief(mode) {
 // ── Populate AI debrief picker when AI page is shown ──
 // (called from showPage via the ai branch)
 
-async function deleteRound(id){if(!confirm('Delete this round?'))return;try{await sbDelete('rounds',id);}catch(e){showToast('❌ Could not delete');}}
+async function deleteRound(id){
+  if(!confirm('Delete this round?'))return;
+  try{
+    await sbDelete('rounds',id);
+    // Update local cache immediately instead of waiting on the realtime socket,
+    // which can lag or silently miss the DELETE event.
+    _rounds=_rounds.filter(r=>r.id!==id);
+    if(document.getElementById('page-history')?.classList.contains('active'))renderHistory();
+    if(document.getElementById('page-stats')?.classList.contains('active')){
+      const t=document.querySelector('.ai-mode-btn.active[id^="anMainTab"]')?.id?.replace('anMainTab-','');
+      if(t==='stats')renderStats();
+      else if(t==='analytics')renderAnalytics();
+      else if(t==='badges')renderBadges();
+    }
+    if(document.getElementById('page-leaderboard')?.classList.contains('active')){
+      if(_lbScope==='everyone')renderNational(); else renderLeaderboard();
+    }
+    showToast('🗑️ Round deleted');
+  }catch(e){showToast('❌ Could not delete');}
+}
 async function clearAllData(){
   if(!confirm('Delete ALL rounds and golfers? Cannot be undone.'))return;
   try{await Promise.all([sbDeleteAll('rounds'),sbDeleteAll('golfers')]);_rounds=[];_golfers=[];refreshGolferDropdowns();renderHistory();showToast('All data cleared');}
@@ -6859,6 +6878,14 @@ function renderStats(){
   const stp=r=>r.score_to_par??r.scoreToPar??0;
   const scored=rounds.filter(r=>r.score>0);
 
+  // Holes actually played for a round — falls back to counting scored holes, then 18.
+  const holesPlayedOf=r=>r.holes_played || parseHoles(r).filter(h=>h.score>0&&!h.scratched).length || 18;
+  // "Full" rounds are ones close enough to 18 that raw totals (score, putts) are
+  // still an apples-to-apples comparison. Shorter rounds (e.g. 6 holes) get folded
+  // into the averages via per-hole equalization instead of their raw totals.
+  const isFullRound=r=>holesPlayedOf(r)>=17;
+  const fullRounds=scored.filter(isFullRound);
+
   // ── Trend helpers ──
   // Compare avg of recent half vs older half. For scores/putts lower=better so flip sign.
   function calcTrend(arr, fn, lowerIsBetter=false) {
@@ -6872,18 +6899,26 @@ function renderStats(){
     return lowerIsBetter ? -delta : delta; // flip so positive always means "improving"
   }
 
-  // Score trends
-  const scoreTrend  = calcTrend(scored, r=>r.score, true);
-  const avgScore    = scored.length?(scored.reduce((s,r)=>s+r.score,0)/scored.length).toFixed(1):'—';
-  const avgToPar    = scored.length?scored.reduce((s,r)=>s+stp(r),0)/scored.length:null;
+  // Score trends — raw "Avg Score" only pools full (17-18 hole) rounds, since a
+  // 6-hole score of 24 isn't comparable to an 18-hole score of 88.
+  const scoreTrend  = calcTrend(fullRounds, r=>r.score, true);
+  const avgScore    = fullRounds.length?(fullRounds.reduce((s,r)=>s+r.score,0)/fullRounds.length).toFixed(1):'—';
+  const bestRound   = fullRounds.length?fullRounds.reduce((b,r)=>r.score<b.score?r:b):null;
+
+  // "To Par" average is equalized per-hole (so partial rounds count, fairly) then
+  // projected back out to an 18-hole scale, matching the equalized/projected
+  // metrics already used on the leaderboard page.
+  const equalized   = scored.map(r=>({r,perHole:stp(r)/holesPlayedOf(r)})).filter(x=>isFinite(x.perHole));
+  const avgToPar    = equalized.length?(equalized.reduce((s,x)=>s+x.perHole,0)/equalized.length)*18:null;
   const avgToParStr = avgToPar!==null?(avgToPar>=0?`+${avgToPar.toFixed(1)}`:avgToPar.toFixed(1)):'—';
-  const bestRound   = scored.length?scored.reduce((b,r)=>r.score<b.score?r:b):null;
+
   const totalBeers  = rounds.reduce((s,r)=>s+r.beers,0);
   const avgBeers    = rounds.length?(totalBeers/rounds.length).toFixed(1):'—';
   const mostBeers   = rounds.reduce((b,r)=>r.beers>b?r.beers:b,0);
 
-  // Putts trends
-  const puttRounds  = rounds.filter(r=>r.total_putts>0);
+  // Putts trends — same full-round-only treatment as Avg Score for the raw
+  // per-round count; "Avg Putts/Hole" below already equalizes across all rounds.
+  const puttRounds  = fullRounds.filter(r=>r.total_putts>0);
   const puttTrend   = calcTrend(puttRounds, r=>r.total_putts, true);
   const avgPutts    = puttRounds.length?(puttRounds.reduce((s,r)=>s+r.total_putts,0)/puttRounds.length).toFixed(1):'—';
   const bestPutts   = puttRounds.length?puttRounds.reduce((b,r)=>r.total_putts<b?r.total_putts:b,999):'—';
@@ -6938,9 +6973,11 @@ function renderStats(){
   const whs=filter?calcWHS(rounds):null;
   const whsTile=filter?(whs?tile('🏌️',whs.hcp>0?`+${whs.hcp}`:whs.hcp,'WHS Handicap',`Best ${whs.numUsed} of ${whs.diffs.length} rounds`,false,'hcp-tile'):tile('🏌️','—','WHS Handicap','Need 3+ rated rounds',false,'hcp-tile')):'';
 
+  const partialCount = scored.length - fullRounds.length;
+  const avgScoreSub = avgToParStr+' to par (18-hole equalized)'+(partialCount>0?` · ${partialCount} partial round${partialCount!==1?'s':''} folded in`:'');
   grid.innerHTML=`
     ${tile('🏆',rounds.length,'Rounds Played')}
-    ${tile('📊',avgScore,'Avg Score',avgToParStr+' to par',false,'',scoreTrend)}
+    ${tile('📊',avgScore,'Avg Score',avgScoreSub,false,'',scoreTrend)}
     ${tile('⭐',bestRound?bestRound.score:'—','Best Round',bestRound?bestRound.course:'')}
     ${whsTile}
     ${tile('🟣',avgPutts,'Avg Putts/Round','',false,'putt-tile',puttTrend)}
