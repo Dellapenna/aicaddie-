@@ -6899,9 +6899,9 @@ function renderStats(){
     return lowerIsBetter ? -delta : delta; // flip so positive always means "improving"
   }
 
-  // Score trends — raw "Avg Score" only pools full (17-18 hole) rounds, since a
-  // 6-hole score of 24 isn't comparable to an 18-hole score of 88.
-  const scoreTrend  = calcTrend(fullRounds, r=>r.score, true);
+  // Score trends — equalized to an 18-hole basis (score-to-par per hole × 18) so a
+  // 6-hole round pulls its real weight instead of being ignored or badly distorting things.
+  const scoreTrend  = calcTrend(scored, r=>(stp(r)/holesPlayedOf(r))*18, true);
   const avgScore    = fullRounds.length?(fullRounds.reduce((s,r)=>s+r.score,0)/fullRounds.length).toFixed(1):'—';
   const bestRound   = fullRounds.length?fullRounds.reduce((b,r)=>r.score<b.score?r:b):null;
 
@@ -6916,10 +6916,11 @@ function renderStats(){
   const avgBeers    = rounds.length?(totalBeers/rounds.length).toFixed(1):'—';
   const mostBeers   = rounds.reduce((b,r)=>r.beers>b?r.beers:b,0);
 
-  // Putts trends — same full-round-only treatment as Avg Score for the raw
-  // per-round count; "Avg Putts/Hole" below already equalizes across all rounds.
+  // Putts trends — same equalization, using putts-per-hole × 18 so partial rounds
+  // count proportionally instead of being excluded.
+  const puttRoundsAll = scored.filter(r=>r.total_putts>0);
+  const puttTrend   = calcTrend(puttRoundsAll, r=>(r.total_putts/holesPlayedOf(r))*18, true);
   const puttRounds  = fullRounds.filter(r=>r.total_putts>0);
-  const puttTrend   = calcTrend(puttRounds, r=>r.total_putts, true);
   const avgPutts    = puttRounds.length?(puttRounds.reduce((s,r)=>s+r.total_putts,0)/puttRounds.length).toFixed(1):'—';
   const bestPutts   = puttRounds.length?puttRounds.reduce((b,r)=>r.total_putts<b?r.total_putts:b,999):'—';
   const totalHolesWithPutts=rounds.reduce((s,r)=>s+parseHoles(r).filter(h=>h.putts>0).length,0);
@@ -6995,10 +6996,11 @@ function renderStats(){
   // Trend legend
   if (scored.length >= 4) {
     const legendEl = document.getElementById('statsExtra');
+    const trendPartialNote = partialCount>0 ? `<br>*Score/putt trends are equalized to an 18-hole basis so partial rounds count fairly.` : '';
     legendEl.innerHTML = `<div style="font-size:0.72rem;color:var(--cream-muted);text-align:right;margin-bottom:0.75rem">
       <span style="color:#6fcf97">↑</span> improving &nbsp;
       <span style="color:#f87171">↓</span> getting worse &nbsp;
-      <span style="color:var(--cream-muted)">→</span> flat &nbsp;·&nbsp; vs your previous ${Math.floor(scored.length/2)} rounds
+      <span style="color:var(--cream-muted)">→</span> flat &nbsp;·&nbsp; vs your previous ${Math.floor(scored.length/2)} rounds${trendPartialNote}
     </div>`;
   }
 
